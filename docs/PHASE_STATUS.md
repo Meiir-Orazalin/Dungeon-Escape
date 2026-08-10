@@ -4,7 +4,7 @@
 
 - **Version:** `v0.1.0`
 - **Current phase:** Phase 1 — Foundation and Playable Movement Prototype
-- **Phase state:** Implemented and verified locally; completion commit pending
+- **Phase state:** Implemented and verified
 
 ## Completed requirements
 
@@ -73,7 +73,7 @@ git status --short
 
 ## Release references
 
-- **Phase completion commit:** Pending final verification
+- **Phase completion commit:** `4105225e1c2970ece8493d63339292f16f239715`
 - **Version tag:** `v0.1.0`
 - **Published tag target before full-spec completion:** `819765fd0d5b5d80c1c3f083700f0f82112deecc`
 - **Remote:** `https://github.com/Meiir-Orazalin/Dungeon-Escape.git`
