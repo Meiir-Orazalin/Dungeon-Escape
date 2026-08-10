@@ -5,117 +5,38 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="Dungeon Escape — find your way through a torchlit dungeon and reach the portal."
+      content="Dungeon Escape — a dark fantasy movement prototype built with Phaser."
     />
-    <meta name="theme-color" content="#090d14" />
+    <meta name="theme-color" content="#080b0f" />
     <title>Dungeon Escape</title>
-    <link rel="stylesheet" href="./src/styles.css" />
   </head>
   <body>
-    <div class="atmosphere" aria-hidden="true"></div>
-
-    <main class="shell">
-      <header class="hero">
+    <main class="app-shell">
+      <header class="site-header" aria-label="Dungeon Escape prototype">
+        <div class="brand-mark" aria-hidden="true">DE</div>
         <div>
-          <p class="eyebrow">Phase I · The First Descent</p>
-          <h1>Dungeon <span>Escape</span></h1>
+          <p class="eyebrow">Expedition 01 · Foundation</p>
+          <h1>Dungeon Escape</h1>
         </div>
-        <p class="hero__copy">
-          The gate is still open. Cross the forgotten halls before the dark closes in.
-        </p>
+        <p class="phase-badge"><span></span> Prototype online</p>
       </header>
 
-      <section class="game-layout" aria-label="Dungeon Escape game">
-        <div class="dungeon-frame" id="dungeon-frame">
-          <div class="dungeon-frame__topline">
-            <span>Depth 01</span>
-            <span class="torch-label"><i aria-hidden="true"></i> Torchlight steady</span>
-          </div>
-
-          <div class="canvas-wrap">
-            <canvas
-              id="dungeon"
-              role="img"
-              aria-describedby="game-help game-status"
-              tabindex="0"
-            >
-              Your browser does not support the dungeon canvas. Use a current browser to play.
-            </canvas>
-            <div class="victory" id="victory" hidden>
-              <div class="victory__sigil" aria-hidden="true">✦</div>
-              <p class="eyebrow">Passage secured</p>
-              <h2>You escaped</h2>
-              <p id="victory-summary">The old dungeon yields—for now.</p>
-              <button class="button button--primary" id="play-again" type="button">
-                Descend again
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <aside class="side-panel">
-          <div class="objective-card">
-            <p class="panel-label">Current objective</p>
-            <div class="objective">
-              <span class="objective__icon" aria-hidden="true">◇</span>
-              <div>
-                <h2>Reach the portal</h2>
-                <p>Follow the blue flame through the eastern passage.</p>
-              </div>
-            </div>
-          </div>
-
-          <div class="stats" aria-label="Run statistics">
-            <div>
-              <span class="panel-label">Steps taken</span>
-              <strong id="move-count">00</strong>
-            </div>
-            <div>
-              <span class="panel-label">Explorer</span>
-              <strong class="status-ready" id="run-state">Ready</strong>
-            </div>
-          </div>
-
-          <div class="controls-card">
-            <div class="controls-heading">
-              <div>
-                <p class="panel-label">Movement</p>
-                <h2>Choose your path</h2>
-              </div>
-              <button class="button button--quiet" id="restart" type="button">Restart</button>
-            </div>
-
-            <div class="controls-row">
-              <div class="key-guide" id="game-help">
-                <div class="keys keys--wasd" aria-hidden="true">
-                  <kbd>W</kbd>
-                  <kbd>A</kbd><kbd>S</kbd><kbd>D</kbd>
-                </div>
-                <p><strong>WASD</strong> or arrow keys</p>
-              </div>
-
-              <div class="d-pad" aria-label="On-screen movement controls">
-                <button data-direction="up" type="button" aria-label="Move up">↑</button>
-                <button data-direction="left" type="button" aria-label="Move left">←</button>
-                <button data-direction="down" type="button" aria-label="Move down">↓</button>
-                <button data-direction="right" type="button" aria-label="Move right">→</button>
-              </div>
-            </div>
-          </div>
-
-          <p class="status-message" id="game-status" aria-live="polite">
-            Find the glowing portal. The stone walls will block your path.
-          </p>
-        </aside>
+      <section class="game-frame" aria-label="Dungeon Escape game area">
+        <span class="frame-corner frame-corner--top-left" aria-hidden="true"></span>
+        <span class="frame-corner frame-corner--top-right" aria-hidden="true"></span>
+        <span class="frame-corner frame-corner--bottom-left" aria-hidden="true"></span>
+        <span class="frame-corner frame-corner--bottom-right" aria-hidden="true"></span>
+        <div id="game-container"></div>
       </section>
 
-      <footer>
-        <span>Expedition I</span>
-        <span aria-hidden="true">◆</span>
-        <span>The descent begins</span>
+      <footer class="control-strip" id="game-help">
+        <p><kbd>WASD</kbd> <span>or</span> <kbd>Arrow Keys</kbd> to move</p>
+        <span class="divider" aria-hidden="true"></span>
+        <p><kbd>R</kbd> to restart</p>
+        <p class="scene-status" id="game-state" aria-live="polite">Loading dungeon…</p>
       </footer>
     </main>
 
-    <script type="module" src="./src/main.js"></script>
+    <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
