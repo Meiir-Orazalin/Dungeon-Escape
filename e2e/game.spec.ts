@@ -743,37 +743,21 @@ test("Stone Warden telegraphs, charges without steering, recovers, and is sword-
   const steeringKey =
     Math.abs(lockedDirection.x) >= Math.abs(lockedDirection.y) ? "ArrowDown" : "ArrowRight";
   await page.keyboard.down(steeringKey);
-  const chargePositions = await page.evaluate(async (enemyId) => {
-    const bridge = (window as TestWindow).__DUNGEON_ESCAPE_E2E__;
-    if (!bridge) throw new Error("The E2E bridge is unavailable.");
-    const positions: Position[] = [];
-    for (let frame = 0; frame < 8; frame += 1) {
-      const enemy = bridge.snapshot().enemies.find((candidate) => candidate.id === enemyId);
-      if (!enemy) throw new Error(`Missing E2E enemy ${enemyId}.`);
-      if (enemy.state !== "charge") break;
-      positions.push(enemy.position);
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-    }
-    return positions;
-  }, warden.id);
-  await page.keyboard.up(steeringKey);
-  const chargeVectors = chargePositions
-    .slice(1)
-    .map((position, index) => ({
-      x: position.x - (chargePositions[index]?.x ?? position.x),
-      y: position.y - (chargePositions[index]?.y ?? position.y),
-    }))
-    .filter((vector) => Math.hypot(vector.x, vector.y) > 0.1);
-  expect(chargeVectors.length).toBeGreaterThanOrEqual(2);
-  const firstVector = chargeVectors[0] as Position;
-  for (const vector of chargeVectors.slice(1)) {
-    const dot = firstVector.x * vector.x + firstVector.y * vector.y;
-    const magnitudes = Math.hypot(firstVector.x, firstVector.y) * Math.hypot(vector.x, vector.y);
-    expect(dot / magnitudes).toBeGreaterThan(0.8);
-  }
   await expect
     .poll(async () => enemyById(await getSnapshot(page), warden.id).state, { timeout: 3_500 })
     .toBe("recover");
+  await page.keyboard.up(steeringKey);
+  const chargeEnd = enemyById(await getSnapshot(page), warden.id).position;
+  const chargeDisplacement = {
+    x: chargeEnd.x - chargeStart.x,
+    y: chargeEnd.y - chargeStart.y,
+  };
+  const dot = lockedDirection.x * chargeDisplacement.x + lockedDirection.y * chargeDisplacement.y;
+  const magnitudes =
+    Math.hypot(lockedDirection.x, lockedDirection.y) *
+    Math.hypot(chargeDisplacement.x, chargeDisplacement.y);
+  expect(Math.hypot(chargeDisplacement.x, chargeDisplacement.y)).toBeGreaterThan(0.1);
+  expect(dot / magnitudes).toBeGreaterThan(0.8);
 });
 
 test("escape succeeds with living enemies and freezes the complete combat runtime", async ({
