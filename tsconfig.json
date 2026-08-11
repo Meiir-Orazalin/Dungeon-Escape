@@ -18,5 +18,14 @@
     "noFallthroughCasesInSwitch": true,
     "types": ["vite/client", "node"]
   },
-  "include": ["src", "test", "e2e", "eslint.config.js", "playwright.config.ts", "vitest.config.ts"]
+  "include": [
+    "src",
+    "test",
+    "e2e",
+    "e2e-live",
+    "eslint.config.js",
+    "playwright.config.ts",
+    "playwright.live.config.ts",
+    "vitest.config.ts"
+  ]
 }

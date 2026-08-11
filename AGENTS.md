@@ -17,6 +17,8 @@ These instructions apply to the entire Dungeon Escape repository.
 - Automatically commit, tag when required, and push a completed phase after all required checks pass.
 - Never force-push or silently rewrite a published tag.
 - Never claim a test, build, commit, tag, or push succeeded without command evidence.
+- Every verified push to `main` deploys production through GitHub Pages; never disable deployment checks merely to make a run pass.
+- Run the production audit before deployment and the live smoke suite after a production deployment when the domain is ready.
 
 ## Repository safety
 
@@ -24,6 +26,8 @@ These instructions apply to the entire Dungeon Escape repository.
 - Do not replace the configured GitHub remote or create a nested Git repository.
 - Do not delete or overwrite unrelated user work.
 - Do not introduce copyrighted game assets or runtime CDN dependencies.
+- Do not commit `dist`, create a `gh-pages` branch, or add test-only bridge code to the production build.
+- Keep the Vite production base at `/` and keep canonical metadata aligned with `https://meiirorazalin.com/`.
 
 ## Documentation
 

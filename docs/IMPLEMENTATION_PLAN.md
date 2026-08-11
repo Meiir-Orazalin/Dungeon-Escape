@@ -22,9 +22,15 @@ Add the first complete one-floor objective loop: deterministically place and col
 
 ## Phase 4 — Enemies and combat
 
-**Status: Complete — current release scope**
+**Status: Complete**
 
 Add deterministic one-per-non-spawn-room encounters, Bone Stalker pursuit, Ash Wisp projectiles, Stone Warden charges, directional sword attacks, a wall-colliding dash, five-point health, damage feedback, player defeat, and complete same-seed/new-dungeon reset flows. Enemies remain room-bound and optional to the escape objective; loot, upgrades, multiple floors, bosses, audio, and persistence remain deferred.
+
+## v0.4.1 milestone — Public web deployment
+
+**Status: Current infrastructure milestone; external launch verification pending**
+
+Publish the unchanged Phase 4 game as a root-hosted GitHub Pages site. Add canonical metadata, original generated branding assets, a production artifact audit, pinned GitHub Actions deployment, separate bridge-free live smoke tests, custom-domain configuration, DNS/HTTPS procedures, and non-destructive rollback documentation. This milestone adds no gameplay and does not begin Phase 5.
 
 ## Phase 5 — Loot and upgrades
 

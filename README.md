@@ -1,8 +1,16 @@
 # Dungeon Escape
 
-Dungeon Escape is a deterministic dark-fantasy browser action game. Version `v0.4.0` surrounds the existing one-floor Runic Key and Ancient Gate objective with reproducible room encounters, three enemy archetypes, melee combat, a dash, five-point health, and player defeat.
+Dungeon Escape is a deterministic dark-fantasy browser action game. Version `v0.4.1` packages the verified Phase 4 game as a secure static GitHub Pages deployment without changing gameplay, balance, or deterministic fingerprints.
 
-Everything visible is drawn with original programmatic Phaser shapes and textures. The project loads no external art, fonts, runtime CDNs, APIs, or backend services.
+Everything visible is drawn with original programmatic Phaser shapes and textures. The project loads no external art, fonts, runtime CDNs, APIs, analytics, or backend services.
+
+## Play online
+
+Canonical production URL: <https://meiirorazalin.com/>
+
+Fixed-seed example: <https://meiirorazalin.com/?seed=production-smoke>
+
+**Current deployment status:** Deployment infrastructure configured; custom-domain activation pending. The URL above becomes the public launch only after DNS, GitHub domain verification, certificate approval, HTTPS enforcement, and live smoke tests pass.
 
 ## Current playable functionality
 
@@ -10,70 +18,40 @@ Everything visible is drawn with original programmatic Phaser shapes and texture
 - Deterministic 72 × 44-tile dungeons with 10–14 rooms and connected three-tile corridors
 - One deterministic enemy in every non-spawn room: 9–13 enemies per dungeon
 - Bone Stalker melee pursuit, Ash Wisp projectiles, and Stone Warden charges
-- Room-local enemy activation: undiscovered enemies remain dormant and disengaged enemies return home
-- Directional sword attacks with <kbd>Space</kbd>, <kbd>J</kbd>, or a camera-correct pointer aim
+- Room-local enemy activation and return behavior
+- Directional sword attacks with <kbd>Space</kbd>, <kbd>J</kbd>, or camera-correct pointer aim
 - Directional, wall-colliding, temporarily invulnerable <kbd>Shift</kbd> dash
-- Five-point player health, contact/projectile damage, hit stun, knockback, and invulnerability
+- Five-point health, contact/projectile damage, hit stun, knockback, and invulnerability
 - Deterministic Runic Key and Ancient Gate objective with <kbd>E</kbd> interaction
 - Escaped and defeated overlays with same-seed replay and new-dungeon controls
 - Combat-aware HUD and discovered-only minimap objective/threat markers
 - Responsive 960 × 540 canvas over a 2304 × 1408 camera-followed world
 
-Enemies drop nothing. Loot, upgrades, multiple floors, bosses, traps, audio, scoring, best times, persistence, and virtual controls remain deferred.
+Enemies drop nothing. Phase 5 loot and upgrades remain deferred, as do multiple floors, bosses, traps, audio, scoring, persistence, and virtual controls.
 
-## Combat and escape loop
+## Combat, objective, and reset behavior
 
-1. Explore until a room is discovered and its room-bound enemy awakens.
-2. Fight with the directional sword or evade with the dash. Killing enemies is optional.
-3. Find the **Runic Key** and press <kbd>E</kbd> to take it.
-4. Reach the **Ancient Gate**. It remains sealed until the key is collected.
-5. Press <kbd>E</kbd> at the ready gate to escape—even if enemies are still alive.
-6. Replay the same deterministic run or generate a new dungeon after escape or defeat.
+Explore, fight or evade room-bound enemies, collect the **Runic Key** with <kbd>E</kbd>, and use <kbd>E</kbd> again at the ready **Ancient Gate**. Enemies are optional hazards: living enemies never block escape. The floor timer freezes on escape or defeat, and terminal overlays show session-only health and enemy statistics rather than a score.
 
-The timer freezes on either terminal outcome. Completion statistics show health and defeated enemies, but they are session information rather than a score or persistent record.
+<kbd>R</kbd> performs a full same-seed replay with restored health, enemies, key, sealed gate, timer, discovery, facing, attack, and dash state while preserving all three deterministic fingerprints. <kbd>N</kbd> creates a new seed and complete run; <kbd>Enter</kbd> or <kbd>Space</kbd> also creates a new dungeon from a terminal overlay. Objective and threat markers remain hidden until their rooms are discovered.
 
-## Seed contract
+## Deterministic seed contract
 
-Use a URL seed to reproduce the dungeon, objective, and encounter plan:
-
-```text
-http://127.0.0.1:5173/?seed=ember-vault_42
-```
-
-- Letters, digits, hyphens, and underscores are preserved.
-- Seeds normalize to lowercase ASCII and are limited to 48 characters.
-- A non-empty `?seed=` reproduces the same rooms, corridors, spawn, key, gate, enemies, and three fingerprints in this application version.
-- The active seed is written with `history.replaceState` without reloading.
-- Without a URL seed, `crypto.getRandomValues` creates a friendly seed outside deterministic generation.
-
-## Restart and new-dungeon behavior
-
-- <kbd>R</kbd> performs a full same-seed replay during active play or from either terminal overlay. It restores full health, dash readiness, all enemies at full health, the key, sealed gate, zero timer, spawn-only discovery, default east facing, and the original spawn while preserving layout, objective, and encounter fingerprints.
-- <kbd>N</kbd> creates a new friendly seed, dungeon, objective plan, encounter plan, and fresh runtime state.
-- From escape or defeat, <kbd>Enter</kbd> and <kbd>Space</kbd> also create a new dungeon.
-
-## Minimap behavior
-
-Only the spawn room is initially visible. Rooms remain discovered after entry, while corridors appear after both endpoint rooms are discovered.
-
-Objective and threat markers never reveal undiscovered rooms. A discovered living-enemy room has one stable threat marker, removed on death. Key and gate markers retain their discovered-only Phase 3 rules and may coexist with a threat marker.
+Letters, digits, hyphens, and underscores are preserved. Seeds normalize to lowercase ASCII and are limited to 48 characters. A non-empty `?seed=` reproduces the same layout, objective, encounter plan, and fingerprints in this application version. Without a URL seed, `crypto.getRandomValues` creates a friendly seed outside deterministic generation.
 
 ## Technology
 
-- pnpm 11.16.0
-- Vite 8
+- pnpm 11.16.0 and Node.js 24 in deployment workflows
+- Vite 8 with an explicit `/` production base
 - Vanilla strict TypeScript
 - Phaser 4.2.1 with Arcade Physics
-- Vitest for deterministic generation, objective, encounter, combat, AI, and helper tests
-- Playwright with Chromium for real browser gameplay paths
+- Vitest and Playwright with Chromium
+- GitHub Pages deployed by GitHub Actions from `main`
 - ESLint and Prettier
 
-## Prerequisites
-
-- Node.js `20.19.0` or newer, or `22.12.0` or newer
-- pnpm `11.16.0` through Corepack or another compatible installation
-
 ## Installation
+
+Prerequisites are Node.js `20.19.0` or newer, or `22.12.0` or newer, and pnpm `11.16.0`.
 
 ```bash
 corepack enable
@@ -81,22 +59,29 @@ pnpm install --frozen-lockfile
 pnpm test:e2e:install
 ```
 
-## Development
+## Local development
 
 ```bash
 pnpm dev
 ```
 
-Open <http://127.0.0.1:5173>.
+Open <http://127.0.0.1:5173/>.
 
-## Production build
+## Production build and audit
 
 ```bash
 pnpm build
+pnpm audit:production
 pnpm preview
 ```
 
-The preview is served at <http://127.0.0.1:4173>.
+The preview is served at <http://127.0.0.1:4173/>. The audit checks production metadata, root-relative assets, image dimensions, manifest data, artifact hygiene, and test-bridge isolation.
+
+Branding assets are committed source assets. Regenerate them intentionally with:
+
+```bash
+pnpm assets:generate
+```
 
 ## Tests and quality checks
 
@@ -105,12 +90,17 @@ pnpm format:check
 pnpm lint
 pnpm typecheck
 pnpm test:run
-pnpm build
 pnpm test:e2e
 pnpm check
 ```
 
-`pnpm check` runs formatting, ESLint, strict TypeScript, unit tests, and a production build. `pnpm test:e2e` builds production assets before Chromium runs and audits test-bridge isolation. Use `pnpm test` for Vitest watch mode and `pnpm format` to format the repository.
+After the canonical domain is ready, run the separate bridge-free production suite with:
+
+```bash
+LIVE_BASE_URL=https://meiirorazalin.com pnpm test:live
+```
+
+`pnpm check` runs formatting, ESLint, strict TypeScript, unit tests, a production build, and the production audit. Local E2E tests retain their isolated E2E-only bridge; live tests use only public behavior.
 
 ## Controls
 
@@ -126,6 +116,8 @@ pnpm check
 | Completion or defeat | Replay this seed       | R or **Replay This Seed**           |
 | Completion or defeat | Generate a new dungeon | N, Enter, Space, or **New Dungeon** |
 
-## Project status
+## Deployment
 
-Phase 4 — Deterministic Enemies and Combat is implemented. See [combat and enemies](docs/COMBAT_AND_ENEMIES.md), [the escape-objective contract](docs/ESCAPE_OBJECTIVE.md), [the generation contract](docs/DUNGEON_GENERATION.md), [the implementation plan](docs/IMPLEMENTATION_PLAN.md), and [the phase status](docs/PHASE_STATUS.md).
+Every verified push to `main` runs the **Quality** and **Deploy Production** workflows. Deployment uploads only `dist`; no `gh-pages` branch or repository `CNAME` file is used. Domain, DNS, certificate, rollback, and troubleshooting procedures are documented in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+
+See [combat and enemies](docs/COMBAT_AND_ENEMIES.md), [the escape-objective contract](docs/ESCAPE_OBJECTIVE.md), [the generation contract](docs/DUNGEON_GENERATION.md), [the implementation plan](docs/IMPLEMENTATION_PLAN.md), and [the milestone status](docs/PHASE_STATUS.md).

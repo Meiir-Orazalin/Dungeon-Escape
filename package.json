@@ -1,11 +1,13 @@
 {
   "name": "dungeon-escape",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "private": true,
   "type": "module",
   "description": "A deterministic dark fantasy dungeon combat and escape game built with Phaser and TypeScript.",
   "packageManager": "pnpm@11.16.0",
   "scripts": {
+    "assets:generate": "PLAYWRIGHT_BROWSERS_PATH=./.playwright-browsers node scripts/generate-site-assets.mjs",
+    "audit:production": "node scripts/audit-production.mjs",
     "dev": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 127.0.0.1",
@@ -17,7 +19,8 @@
     "test:run": "vitest run",
     "test:e2e:install": "PLAYWRIGHT_BROWSERS_PATH=./.playwright-browsers playwright install chromium",
     "test:e2e": "pnpm build && PLAYWRIGHT_BROWSERS_PATH=./.playwright-browsers playwright test",
-    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:run && pnpm build"
+    "test:live": "PLAYWRIGHT_BROWSERS_PATH=./.playwright-browsers playwright test --config=playwright.live.config.ts",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:run && pnpm build && pnpm audit:production"
   },
   "dependencies": {
     "phaser": "4.2.1"
