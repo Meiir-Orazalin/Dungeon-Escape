@@ -4,7 +4,7 @@
 
 - **Version:** `v0.4.0`
 - **Current phase:** Phase 4 — Deterministic Enemies and Combat
-- **Phase state:** Complete and verified; release commits and publication pending
+- **Phase state:** Complete and verified; final phase record and publication pending
 
 ## Completed Phase 4 requirements
 
@@ -114,7 +114,7 @@ The production audit searches built JavaScript for `__DUNGEON_ESCAPE_E2E__`, `in
 
 ## Release references
 
-- **Phase 4 implementation commit:** Pending the first release commit; recorded by the verified-record commit
+- **Phase 4 implementation commit:** `ba43f6402470b93ed4ae96e3c30ae426e0813544`
 - **Release intent:** annotated tag `v0.4.0` at the final verified-record commit
 - **Remote:** `https://github.com/Meiir-Orazalin/Dungeon-Escape.git`
 
