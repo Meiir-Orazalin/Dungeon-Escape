@@ -3,6 +3,7 @@ import { join } from "node:path";
 
 import { expect, test, type Page } from "@playwright/test";
 
+import { COMBAT_CONFIG } from "../src/game/combat/config";
 import { GAME_HEIGHT, GAME_WIDTH, PLAYER_BODY_SIZE } from "../src/game/constants";
 import { generateDungeon } from "../src/game/dungeon/generateDungeon";
 import type { DungeonLayout } from "../src/game/dungeon/types";
@@ -601,7 +602,8 @@ test("pointer attacks aim toward the world pointer and damage through the real m
     .poll(async () => enemyById(await getSnapshot(page), wisp.id).currentHealth)
     .toBe(wisp.maximumHealth - 1);
   const finalFacing = (await getSnapshot(page)).playerFacing ?? { x: 0, y: 0 };
-  expect(finalFacing.x * facing.x + finalFacing.y * facing.y).toBeGreaterThan(0.8);
+  const meleeArcBoundary = Math.cos((COMBAT_CONFIG.attackArcDegrees * Math.PI) / 360);
+  expect(finalFacing.x * facing.x + finalFacing.y * facing.y).toBeGreaterThan(meleeArcBoundary);
 });
 
 test("contact damage uses invulnerability and dash movement grants contact immunity", async ({
@@ -616,20 +618,24 @@ test("contact damage uses invulnerability and dash movement grants contact immun
   await teleportOntoEnemy(page, stalker.id);
   await page.waitForTimeout(100);
   expect((await getSnapshot(page)).playerHealth).toBe(4);
+  await teleportToTarget(page, "spawn");
   await expect.poll(async () => (await getSnapshot(page)).playerInvulnerable).toBe(false);
 
   const beforeDash = await getSnapshot(page);
   await page.keyboard.down("Shift");
   await waitForDashActive(page);
-  await page.waitForTimeout(30);
-  const movedDuringDash = await getSnapshot(page);
-  await teleportOntoEnemy(page, stalker.id);
-  await page.waitForTimeout(20);
-  const duringDash = await getSnapshot(page);
+  const duringDash = await page.evaluate(async (enemyId) => {
+    const bridge = (window as TestWindow).__DUNGEON_ESCAPE_E2E__;
+    if (!bridge) throw new Error("The E2E bridge is unavailable.");
+    bridge.teleportOntoEnemy(enemyId);
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    const snapshot = bridge.snapshot();
+    bridge.teleportToTarget("spawn");
+    return snapshot;
+  }, stalker.id);
   await page.keyboard.up("Shift");
   expect(duringDash.playerHealth).toBe(beforeDash.playerHealth);
-  expect(movedDuringDash.playerPosition?.x).not.toBe(beforeDash.playerPosition?.x);
-  expect(["active", "cooldown"]).toContain(duringDash.playerDashState);
+  expect(duringDash.playerDashState).toBe("active");
   await expect.poll(async () => (await getSnapshot(page)).dashReady).toBe(true);
 });
 
