@@ -68,6 +68,10 @@ The generator approximates graph-diameter endpoints using two breadth-first grap
 
 Spawn and destination always use different rooms, are walkable, and are reachable through both the room graph and carved floor. Destination data is metadata only in Phase 2: it is not rendered, announced, actionable, or able to complete a floor.
 
+### Cross-phase use in Phase 3
+
+Phase 2 generated and validated the destination metadata without rendering a gate or objective. Phase 3 now consumes that unchanged metadata as the Ancient Gate position. This later use does not retroactively make the gate part of the published Phase 2 release, and the Phase 2 layout fingerprint remains structural.
+
 ## Validation invariants
 
 Every candidate layout passes a dedicated pure validator before Phaser receives it. Validation checks:

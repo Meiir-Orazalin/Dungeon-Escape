@@ -62,7 +62,7 @@ export class MenuScene extends Phaser.Scene {
       .text(
         GAME_WIDTH / 2,
         225,
-        "Every seed reshapes the halls. No two descents need be the same.",
+        "Find the Runic Key. Awaken the Ancient Gate. Escape the shifting halls.",
         {
           color: "#8f9b9d",
           fontFamily: "Georgia, Times New Roman, serif",
@@ -109,15 +109,15 @@ export class MenuScene extends Phaser.Scene {
 
     const controls = this.add.container(GAME_WIDTH / 2, 454);
     const controlPlate = this.add
-      .rectangle(0, 0, 520, 62, 0x0b0f11, 0.54)
+      .rectangle(0, 0, 660, 62, 0x0b0f11, 0.54)
       .setStrokeStyle(1, 0x536164, 0.3);
     const controlText = this.add
-      .text(0, 0, "WASD / ARROWS  ·  MOVE     R  ·  RETURN     N  ·  NEW DUNGEON", {
+      .text(0, 0, "WASD / ARROWS  ·  MOVE     E  ·  INTERACT     R  ·  RESTART     N  ·  NEW", {
         color: "#a7b0af",
         fontFamily: "Arial, sans-serif",
-        fontSize: "13px",
+        fontSize: "12px",
         fontStyle: "bold",
-        letterSpacing: 1.5,
+        letterSpacing: 1.1,
       })
       .setOrigin(0.5);
     controls.add([controlPlate, controlText]);

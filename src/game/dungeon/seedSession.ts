@@ -54,7 +54,9 @@ export function resolveInitialSeed(search: string): string {
 export function replaceSeedInUrl(seed: string): void {
   try {
     const url = new URL(window.location.href);
-    url.searchParams.set("seed", normalizeSeed(seed));
+    const normalizedSeed = normalizeSeed(seed);
+    if (url.searchParams.get("seed") === normalizedSeed) return;
+    url.searchParams.set("seed", normalizedSeed);
     window.history.replaceState(null, "", url);
   } catch {
     // A restricted embedding may not expose a mutable URL. Gameplay remains deterministic.

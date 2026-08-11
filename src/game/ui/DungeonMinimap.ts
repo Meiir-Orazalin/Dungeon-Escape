@@ -3,6 +3,8 @@ import type Phaser from "phaser";
 import { GAME_WIDTH } from "../constants";
 import type { RoomDiscoveryState } from "../dungeon/discovery";
 import type { DungeonLayout, TilePoint } from "../dungeon/types";
+import { deriveObjectiveMarkerState } from "../objective/minimapMarkers";
+import type { EscapeObjectivePlan, EscapeObjectiveState } from "../objective/types";
 
 export class DungeonMinimap {
   private readonly graphics: Phaser.GameObjects.Graphics;
@@ -14,6 +16,7 @@ export class DungeonMinimap {
   public constructor(
     scene: Phaser.Scene,
     private readonly layout: DungeonLayout,
+    private readonly objectivePlan: EscapeObjectivePlan,
   ) {
     this.mapHeight = (this.mapWidth * layout.mapHeight) / layout.mapWidth;
     const container = scene.add
@@ -35,7 +38,7 @@ export class DungeonMinimap {
     container.add([plate, label, this.graphics]);
   }
 
-  public update(discovery: RoomDiscoveryState): void {
+  public update(discovery: RoomDiscoveryState, objectiveState: EscapeObjectiveState): void {
     const scaleX = this.mapWidth / this.layout.mapWidth;
     const scaleY = this.mapHeight / this.layout.mapHeight;
     const point = (tile: TilePoint): TilePoint => ({
@@ -86,6 +89,29 @@ export class DungeonMinimap {
         Math.max(3, room.height * scaleY),
       );
     });
+
+    const markerState = deriveObjectiveMarkerState(discovery, this.objectivePlan, objectiveState);
+    if (markerState.key === "visible") {
+      const key = point({
+        x: this.objectivePlan.keyPosition.tileX,
+        y: this.objectivePlan.keyPosition.tileY,
+      });
+      this.graphics.fillStyle(0xf4c96e, 1);
+      this.graphics.fillCircle(key.x, key.y, 3.4);
+      this.graphics.lineStyle(1, 0xffecae, 0.95);
+      this.graphics.strokeCircle(key.x, key.y, 5.2);
+    }
+    if (markerState.gate !== "hidden") {
+      const gate = point({
+        x: this.objectivePlan.gatePosition.tileX,
+        y: this.objectivePlan.gatePosition.tileY,
+      });
+      const ready = markerState.gate === "ready";
+      this.graphics.lineStyle(2, ready ? 0x8ce0c8 : 0xc35b55, 1);
+      this.graphics.strokeCircle(gate.x, gate.y, 5.2);
+      this.graphics.fillStyle(ready ? 0x8ce0c8 : 0x7b3330, ready ? 0.9 : 0.76);
+      this.graphics.fillCircle(gate.x, gate.y, 2.2);
+    }
 
     const currentRoom = this.layout.rooms.find((room) => room.id === discovery.currentRoomId);
     if (currentRoom) {

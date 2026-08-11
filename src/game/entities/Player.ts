@@ -2,6 +2,7 @@ import Phaser from "phaser";
 
 import { PLAYER_BODY_SIZE, PLAYER_SPEED, TEXTURE_KEYS } from "../constants";
 import { calculateMovementVelocity, type MovementInput } from "../input/movement";
+import { GAME_OBJECT_NAMES } from "../objective/config";
 
 type SpawnPoint = Readonly<{ x: number; y: number }>;
 
@@ -20,6 +21,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
+    this.setName(GAME_OBJECT_NAMES.PLAYER);
+    this.setData("gameObjectType", GAME_OBJECT_NAMES.PLAYER);
     this.setDepth(5);
     this.setCollideWorldBounds(true);
     this.setSize(PLAYER_BODY_SIZE, PLAYER_BODY_SIZE);
@@ -43,6 +46,10 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
 
   public getSpawnPoint(): SpawnPoint {
     return this.spawnPoint;
+  }
+
+  public stopMovement(): void {
+    this.setVelocity(0, 0);
   }
 
   public override preUpdate(time: number, delta: number): void {

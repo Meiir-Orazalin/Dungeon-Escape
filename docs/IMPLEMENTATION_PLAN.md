@@ -10,15 +10,15 @@ Establish the pnpm, Vite, strict TypeScript, and Phaser project; create the resp
 
 ## Phase 2 — Dungeon generation
 
-**Status: Complete — current release scope**
+**Status: Complete**
 
 Replace the single handcrafted layout with deterministic room-and-corridor generation. Add generation validation, reproducible URL seeds, navigability checks, safe graph-diameter spawn placement, generated collision, new-dungeon controls, discovered-room minimap behavior, and structural test coverage without introducing objectives or combat.
 
 ## Phase 3 — Escape objective
 
-**Status: Deferred**
+**Status: Complete — current release scope**
 
-Add the first complete objective loop: locate what is needed to unlock an exit, communicate progress clearly, reach the exit, and complete or restart the floor. Preserve deterministic and reachable placement.
+Add the first complete one-floor objective loop: deterministically place and collect the Runic Key, activate the Ancient Gate from Phase 2 destination metadata, communicate progress, time the floor, complete the escape, and replay the same seed or generate a new dungeon. Enemies, combat, loot, upgrades, and multiple floors remain deferred.
 
 ## Phase 4 — Enemies and combat
 
