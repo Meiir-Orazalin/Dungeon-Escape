@@ -12,6 +12,9 @@ export const GAME_OBJECT_NAMES = Object.freeze({
   RUNIC_KEY: "runic-key",
   ANCIENT_GATE: "ancient-gate",
   COMPLETION_OVERLAY: "completion-overlay",
+  DEFEAT_OVERLAY: "defeat-overlay",
   REPLAY_BUTTON: "replay-this-seed-button",
   NEW_DUNGEON_BUTTON: "new-dungeon-button",
+  DEFEAT_REPLAY_BUTTON: "defeat-replay-this-seed-button",
+  DEFEAT_NEW_DUNGEON_BUTTON: "defeat-new-dungeon-button",
 });

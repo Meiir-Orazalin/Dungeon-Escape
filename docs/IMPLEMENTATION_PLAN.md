@@ -16,15 +16,15 @@ Replace the single handcrafted layout with deterministic room-and-corridor gener
 
 ## Phase 3 — Escape objective
 
-**Status: Complete — current release scope**
+**Status: Complete**
 
 Add the first complete one-floor objective loop: deterministically place and collect the Runic Key, activate the Ancient Gate from Phase 2 destination metadata, communicate progress, time the floor, complete the escape, and replay the same seed or generate a new dungeon. Enemies, combat, loot, upgrades, and multiple floors remain deferred.
 
 ## Phase 4 — Enemies and combat
 
-**Status: Deferred**
+**Status: Complete — current release scope**
 
-Introduce a small enemy roster, readable enemy behaviour, player health, attacks, damage feedback, defeat, and restart flows. Balance clarity and collision correctness before increasing encounter density.
+Add deterministic one-per-non-spawn-room encounters, Bone Stalker pursuit, Ash Wisp projectiles, Stone Warden charges, directional sword attacks, a wall-colliding dash, five-point health, damage feedback, player defeat, and complete same-seed/new-dungeon reset flows. Enemies remain room-bound and optional to the escape objective; loot, upgrades, multiple floors, bosses, audio, and persistence remain deferred.
 
 ## Phase 5 — Loot and upgrades
 

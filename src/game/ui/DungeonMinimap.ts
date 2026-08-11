@@ -3,6 +3,8 @@ import type Phaser from "phaser";
 import { GAME_WIDTH } from "../constants";
 import type { RoomDiscoveryState } from "../dungeon/discovery";
 import type { DungeonLayout, TilePoint } from "../dungeon/types";
+import { deriveThreatRoomIds } from "../encounters/minimapThreats";
+import type { EncounterPlan } from "../encounters/types";
 import { deriveObjectiveMarkerState } from "../objective/minimapMarkers";
 import type { EscapeObjectivePlan, EscapeObjectiveState } from "../objective/types";
 
@@ -17,6 +19,7 @@ export class DungeonMinimap {
     scene: Phaser.Scene,
     private readonly layout: DungeonLayout,
     private readonly objectivePlan: EscapeObjectivePlan,
+    private readonly encounterPlan: EncounterPlan,
   ) {
     this.mapHeight = (this.mapWidth * layout.mapHeight) / layout.mapWidth;
     const container = scene.add
@@ -38,7 +41,11 @@ export class DungeonMinimap {
     container.add([plate, label, this.graphics]);
   }
 
-  public update(discovery: RoomDiscoveryState, objectiveState: EscapeObjectiveState): void {
+  public update(
+    discovery: RoomDiscoveryState,
+    objectiveState: EscapeObjectiveState,
+    aliveEnemyIds: ReadonlySet<string>,
+  ): void {
     const scaleX = this.mapWidth / this.layout.mapWidth;
     const scaleY = this.mapHeight / this.layout.mapHeight;
     const point = (tile: TilePoint): TilePoint => ({
@@ -112,6 +119,30 @@ export class DungeonMinimap {
       this.graphics.fillStyle(ready ? 0x8ce0c8 : 0x7b3330, ready ? 0.9 : 0.76);
       this.graphics.fillCircle(gate.x, gate.y, 2.2);
     }
+
+    deriveThreatRoomIds(discovery, this.encounterPlan, aliveEnemyIds).forEach((roomId) => {
+      const room = this.layout.rooms.find((candidate) => candidate.id === roomId);
+      if (!room) return;
+      const threat = point(room.center);
+      this.graphics.fillStyle(0xd65e55, 0.98);
+      this.graphics.fillTriangle(
+        threat.x - 3.5,
+        threat.y + 4.5,
+        threat.x + 3.5,
+        threat.y + 4.5,
+        threat.x,
+        threat.y - 3.5,
+      );
+      this.graphics.lineStyle(1, 0xffb097, 0.9);
+      this.graphics.strokeTriangle(
+        threat.x - 3.5,
+        threat.y + 4.5,
+        threat.x + 3.5,
+        threat.y + 4.5,
+        threat.x,
+        threat.y - 3.5,
+      );
+    });
 
     const currentRoom = this.layout.rooms.find((room) => room.id === discovery.currentRoomId);
     if (currentRoom) {

@@ -2,49 +2,68 @@
 
 ## Current release
 
-- **Version:** `v0.3.0`
-- **Current phase:** Phase 3 — Deterministic Escape Objective
-- **Phase state:** Complete and verified; final phase-record commit and release publication pending
+- **Version:** `v0.4.0`
+- **Current phase:** Phase 4 — Deterministic Enemies and Combat
+- **Phase state:** Complete and verified; release commits and publication pending
 
-## Completed Phase 3 requirements
+## Completed Phase 4 requirements
 
-- Pure deterministic objective planner, graph-distance ranking, fingerprint, and validator
-- Third-room Runic Key placement with bounded deterministic safe-tile search
-- Ancient Gate placement from unchanged Phase 2 destination metadata
-- Pure seeking-key, key-collected, and completed state machine
-- Inclusive 52-pixel squared-distance interaction selection
-- Guarded <kbd>E</kbd> key with key, sealed-gate, and ready-gate prompts
-- Programmatic Runic Key and Ancient Gate visuals with bounded tweens
-- Locked-gate reaction, key transition feedback, and accessibility announcements
-- Objective-aware HUD with key state, controls, discovered rooms, and MM:SS timer
-- Discovered-only minimap key and sealed/ready gate markers
-- One-floor completion that freezes movement, interaction, and elapsed time
-- Camera-fixed **Dungeon Escaped** overlay with keyboard and pointer replay/new controls
-- E2E-only named-target teleport action with no arbitrary coordinates or objective mutation
+- Pure deterministic encounter planner, `ec-xxxxxxxx` fingerprint, and descriptive validator
+- Exactly one enemy in every non-spawn room: 9–13 enemies for the 10–14-room contract
+- Inclusive 80-pixel spawn/key/gate separation and one full tile of wall clearance
+- Guaranteed Ash Wisp in the key room, Stone Warden at the gate, and Bone Stalker in a third room
+- Stable weighted remaining assignments: 45% Stalker, 30% Wisp, 25% Warden
+- Room-local dormant, engage, return, idle, and defeated lifecycle
+- Directional <kbd>Space</kbd>/<kbd>J</kbd>/pointer sword attacks with wall occlusion and per-swing hit IDs
+- Directional <kbd>Shift</kbd> dash with wall collision, cooldown, and temporary damage immunity
+- Five-point coherent vitality, one-point contact/projectile damage, hit stun, invulnerability, and knockback
+- Bone Stalker pursuit, Ash Wisp spacing/telegraph/projectiles, and Stone Warden wind-up/charge/recovery
+- Bounded programmatic slash, trail, damage, impact, enemy, projectile, telegraph, shadow, and defeat visuals
+- Independent active/escaped/defeated run-outcome model
+- **Fallen in the Catacombs** overlay with keyboard and pointer replay/new controls
+- Combat statistics on the existing completion overlay; living enemies never block escape
+- Combat-aware health/enemy/dash HUD and discovered-only room threat markers
+- E2E-only validated enemy-relative positioning actions with no direct state mutation
 
-## Intentional restart semantic extension
+## Final tuned constants
 
-Phase 2 <kbd>R</kbd> returned the existing player to spawn without regenerating the scene. Phase 3 <kbd>R</kbd> now performs a clean same-seed floor replay. It preserves dungeon and objective fingerprints while restoring the key, resealing the gate, resetting elapsed time and discovery, and returning the player to spawn.
+| System               | Values                                                                                                                  |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Sword                | 1 damage; 58 px range; 110° full arc; 45 ms wind-up; 80 ms active; 105 ms recovery; 230 ms total; 330 ms start cooldown |
+| Enemy sword response | 210 px/s knockback for 120 ms                                                                                           |
+| Dash                 | 600 px/s for 130 ms; 900 ms cooldown                                                                                    |
+| Player vitality      | 5 maximum/initial health; 1 damage; 850 ms invulnerability; 130 ms hit stun; 250 px/s knockback for 120 ms              |
+| Bone Stalker         | 2 health; 105 px/s; 30 px close stop                                                                                    |
+| Ash Wisp             | 2 health; 75 px/s; 150–210 px preferred range; 700 ms initial delay; 350 ms telegraph; 2,000 ms cooldown                |
+| Ash projectile       | 190 px/s; 2,200 ms lifetime; 1 damage                                                                                   |
+| Stone Warden         | 4 health; 55 px/s; 240 px trigger; 550 ms wind-up; 300 px/s charge for 420 ms; 900 ms recovery                          |
 
-## Preserved Phase 1 and Phase 2 requirements
+## Preserved Phase 1–3 behavior
 
-- Pointer, Enter, and Space menu start
-- WASD and arrow movement with normalized diagonal velocity
-- Generated wall collision, world containment, camera following, and responsive scaling
-- Deterministic 10–14-room layouts, three-tile corridors, connected floor, and safe spawn
-- URL seed reproduction, friendly new seeds, structural layout fingerprint, and dynamic world bounds
-- <kbd>N</kbd> new-dungeon behavior and listener cleanup
-- Existing room/corridor discovery rules and hidden undiscovered rooms
-- Strict TypeScript, ESLint, Prettier, Vitest, Playwright, Vite, and non-browser GitHub Actions gates
+- Pointer, Enter, and Space menu start; Space does not leak into an initial attack
+- WASD/arrow normalized movement, generated collision, world bounds, camera following, and responsive scaling
+- Deterministic 10–14-room generation, connected corridors, URL seeds, structural fingerprint, and safe spawn
+- Runic Key, sealed/ready Ancient Gate, guarded <kbd>E</kbd> interaction, objective fingerprint, and timer
+- Discovered-room/corridor rules and hidden undiscovered objective rooms
+- Ancient Gate completion with a collected key; no enemy-clear requirement
+- <kbd>N</kbd> friendly seed and URL update without reload
+- Strict TypeScript and the existing Vite, Phaser, Vitest, Playwright, ESLint, Prettier, and Actions setup
+
+## Runtime semantics
+
+- **Room-local AI limitation:** enemies never path through corridors or pursue outside their home room. Leaving cancels attacks/projectiles and sends a living enemy home.
+- **Same-seed restart:** <kbd>R</kbd> recreates full health, default facing, attack/dash readiness, all enemies at full health, no projectiles, no defeat count, fresh key/gate/objective state, zero timer, spawn-only discovery, and original spawn while preserving all three fingerprints.
+- **Defeat:** zero health transitions active to defeated once, freezes timer and every combat/objective control, stops enemies, destroys projectiles, and waits for an explicit replay or new-dungeon choice.
+- **Completion:** valid gate interaction transitions active to escaped once, freezes the same runtime systems, destroys projectiles, and records health/enemy statistics without requiring enemy deaths.
+- **New dungeon:** <kbd>N</kbd>, or terminal <kbd>Enter</kbd>/<kbd>Space</kbd>, creates a new seed, layout, objective, encounter plan, and fresh runtime state.
 
 ## Deferred requirements
 
-- Phase 4 enemies, attacks, weapons, combat, health, damage, death, traps, and AI
-- Phase 5 coins, general loot, chests, potions, equipment, inventory screens, and upgrades
-- Phase 6 multiple floors, floor transitions, difficulty scaling, bosses, victory runs, and defeat runs
-- Phase 7 audio, expanded presentation, accessibility work, and balancing
-- Phase 8 production deployment, cross-browser release verification, and full browser CI
-- Score calculations, best times, persistent/localStorage progression, and virtual mobile controls
+- Phase 5 coins, experience, drops, general loot, chests, potions, healing, inventories, equipment, multiple weapons, and upgrades
+- Phase 6 multiple floors, floor transitions, difficulty progression, bosses, complete-run victory, and complete-run defeat
+- Phase 7 audio, expanded accessibility/presentation, onboarding, and balancing
+- Phase 8 deployment, cross-browser release verification, optimization, and full browser CI
+- Traps, environmental damage, pause menus, scores, best times, persistent statistics, save games, virtual controls, and network play
 
 ## Verification commands
 
@@ -63,41 +82,44 @@ git diff --check
 git status --short
 ```
 
-The production audit searches built JavaScript for `__DUNGEON_ESCAPE_E2E__`, `installE2EBridge`, and `teleportToTarget`.
+The production audit searches built JavaScript for `__DUNGEON_ESCAPE_E2E__`, `installE2EBridge`, `teleportToTarget`, `teleportNearEnemy`, and `teleportOntoEnemy`.
 
 ## Final test results
 
-- `pnpm format`: passed; Prettier formatted all project sources and documentation.
-- `pnpm install`: passed; dependencies were already synchronized.
+- `pnpm format`: passed; Prettier formatted project source, tests, and documentation.
+- `pnpm install`: passed with dependencies synchronized.
 - `pnpm install --frozen-lockfile`: passed without lockfile changes.
-- `pnpm format:check`: passed with all matched files formatted.
+- `pnpm format:check`: passed.
 - `pnpm lint`: passed with zero warnings.
-- `pnpm typecheck`: passed under strict TypeScript settings.
-- `pnpm test:run`: passed — 6 test files and 81 unit tests, preserving the original 37 tests and adding 44 Phase 3 tests.
-- Representative objective batch: 100 deterministic generated layouts produced valid objective plans.
-- `pnpm build`: passed with Vite 8.2.1.
-- `pnpm test:e2e`: passed — 10 Playwright tests in Chromium.
-- Baseline browser note: the initial sandboxed Phase 2 E2E command failed with `listen EPERM` on `127.0.0.1:4173`; the required unrestricted rerun of the exact command passed all 5 baseline tests before implementation.
+- `pnpm typecheck`: passed under strict TypeScript.
+- `pnpm test:run`: passed — 11 files and 205 tests, preserving all 81 Phase 1–3 tests and adding 124 Phase 4 tests.
+- Representative encounter batch: 100 deterministic layouts/objectives produced valid encounter plans.
+- `pnpm build`: passed with Vite 8.2.1 and Phaser pinned at 4.2.1.
+- `pnpm test:e2e`: passed — 22 Chromium tests covering preserved objective regressions and real attack, dash, contact, projectile, charge, escape, defeat, replay, and new-dungeon paths.
 - `pnpm check`: passed the formatting, lint, typecheck, unit-test, and production-build gates.
 - `git diff --check`: passed.
-- Production bridge isolation: passed; `__DUNGEON_ESCAPE_E2E__`, `installE2EBridge`, and `teleportToTarget` were absent from `dist`.
-- Browser diagnostics: no page errors, uncaught exceptions, failed local requests, Phaser errors, duplicate controls, stale objective objects, post-completion timer movement, or movement behind the overlay.
-- Visual review: passed at 1440 × 900, 960 × 540, 1024 × 640, and 720 × 700. The key, sealed/ready gate, prompt, timer, maximum-length seed, minimap, completion overlay, buttons, and centred no-scroll canvas remained readable.
+- Production bridge isolation: passed; all five test-only identifiers were absent from `dist/assets`.
+- Browser diagnostics: no page errors, uncaught exceptions, failed local assets, Phaser errors, duplicate input/collider/enemy behavior, stale shadows/projectiles, post-terminal movement/timers/attacks, or restart damage callbacks.
+- Visual review: passed at 1440 × 900, 960 × 540, 1024 × 640, and 720 × 700. All archetypes, sword direction, dash/damage feedback, telegraphs, projectile, health, threat markers, objectives, and terminal overlays were readable; page dimensions matched the viewport with no scrolling.
 
 ## Known limitations
 
-- The objective loop covers one floor only.
-- The Runic Key is a single objective item rather than a general inventory.
-- Completion time is session-only and has no score, best time, or persistence.
-- Objective placement and dungeon dimensions use fixed Phase 3 configuration.
-- Movement remains keyboard-first; virtual controls are deferred.
+- Combat and objective progression cover one floor only.
+- Enemies are intentionally room-bound and use direct local movement rather than pathfinding.
+- One sword is available; there are no weapons, drops, rewards, healing, or progression.
+- Completion and defeat statistics are session-only and not scores or records.
+- Movement/combat remain keyboard-and-pointer first; virtual controls are deferred.
 - Phaser remains the majority of the production JavaScript bundle.
-- Full Playwright execution remains local; CI runs the non-browser quality gates.
+- Full Playwright remains local; CI runs non-browser gates.
 
 ## Release references
 
-- **Phase 3 implementation commit:** `594949bad53ae866726a14e9c46debb8d39c29d4`
-- **Release intent:** annotated tag `v0.3.0` at the final verified phase-record commit
+- **Phase 4 implementation commit:** Pending the first release commit; recorded by the verified-record commit
+- **Release intent:** annotated tag `v0.4.0` at the final verified-record commit
 - **Remote:** `https://github.com/Meiir-Orazalin/Dungeon-Escape.git`
 
-Published Phase 2 tag `v0.2.0` peels to `8f704df17d79cadb26b6e17834075814f1dd11ee`. Published Phase 1 tag `v0.1.0` peels to `819765fd0d5b5d80c1c3f083700f0f82112deecc`. Both releases remain published and unchanged.
+Published historical releases remain unchanged:
+
+- `v0.3.0` → `bb29079df58b32645278e0843f6cd6ed2966b46e`
+- `v0.2.0` → `8f704df17d79cadb26b6e17834075814f1dd11ee`
+- `v0.1.0` → `819765fd0d5b5d80c1c3f083700f0f82112deecc`

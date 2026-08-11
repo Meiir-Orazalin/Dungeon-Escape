@@ -1,6 +1,8 @@
 import Phaser from "phaser";
 
 import { PLAYER_BODY_SIZE, PLAYER_SPEED, TEXTURE_KEYS } from "../constants";
+import { DEFAULT_FACING, facingFromMovement, normalizeDirection } from "../combat/facing";
+import type { Vector2 } from "../combat/types";
 import { calculateMovementVelocity, type MovementInput } from "../input/movement";
 import { GAME_OBJECT_NAMES } from "../objective/config";
 
@@ -9,6 +11,7 @@ type SpawnPoint = Readonly<{ x: number; y: number }>;
 export class Player extends Phaser.Physics.Arcade.Sprite {
   private readonly spawnPoint: SpawnPoint;
   private readonly shadow: Phaser.GameObjects.Ellipse;
+  private facing: Vector2 = DEFAULT_FACING;
 
   public constructor(scene: Phaser.Scene, spawnPoint: SpawnPoint) {
     super(scene, spawnPoint.x, spawnPoint.y, TEXTURE_KEYS.PLAYER);
@@ -33,13 +36,30 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.setVelocity(velocity.x, velocity.y);
 
     if (velocity.x !== 0 || velocity.y !== 0) {
-      this.setRotation(Math.atan2(velocity.y, velocity.x));
+      this.setFacing(facingFromMovement(input, this.facing));
     }
+  }
+
+  public getFacing(): Vector2 {
+    return this.facing;
+  }
+
+  public setFacing(direction: Vector2): void {
+    this.facing = normalizeDirection(direction, this.facing);
+    this.setRotation(Math.atan2(this.facing.y, this.facing.x));
+  }
+
+  public flashDamage(): void {
+    this.setTint(0xff6f68);
+    this.scene.time.delayedCall(110, () => {
+      if (this.active) this.clearTint();
+    });
   }
 
   public resetToSpawn(): void {
     const body = this.body as Phaser.Physics.Arcade.Body;
     body.reset(this.spawnPoint.x, this.spawnPoint.y);
+    this.facing = DEFAULT_FACING;
     this.setRotation(0);
     this.syncShadow();
   }

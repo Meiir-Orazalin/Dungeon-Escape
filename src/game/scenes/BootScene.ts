@@ -11,6 +11,7 @@ export class BootScene extends Phaser.Scene {
     this.createFloorTexture();
     this.createStoneTexture();
     this.createPlayerTexture();
+    this.createEnemyTextures();
     this.scene.start(SCENE_KEYS.MENU);
   }
 
@@ -71,6 +72,64 @@ export class BootScene extends Phaser.Scene {
     graphics.fillStyle(0xffe3a3);
     graphics.fillCircle(29, 20, 3);
     graphics.generateTexture(TEXTURE_KEYS.PLAYER, 40, 40);
+    graphics.destroy();
+  }
+
+  private createEnemyTextures(): void {
+    const graphics = this.add.graphics().setVisible(false);
+
+    graphics.fillStyle(0x161617, 0.9);
+    graphics.fillCircle(21, 22, 15);
+    graphics.lineStyle(5, 0xd3c7aa, 1);
+    graphics.lineBetween(12, 12, 30, 30);
+    graphics.lineBetween(30, 12, 12, 30);
+    graphics.fillStyle(0xc9bda1, 1);
+    graphics.fillCircle(21, 19, 11);
+    graphics.fillStyle(0x1b1716, 1);
+    graphics.fillCircle(17, 17, 2.5);
+    graphics.fillCircle(25, 17, 2.5);
+    graphics.fillStyle(0xd85f45, 1);
+    graphics.fillCircle(17, 17, 1.3);
+    graphics.fillCircle(25, 17, 1.3);
+    graphics.generateTexture(TEXTURE_KEYS.BONE_STALKER, 42, 42);
+    graphics.clear();
+
+    graphics.fillStyle(0x3d264d, 0.75);
+    graphics.fillCircle(20, 20, 16);
+    graphics.fillStyle(0x8d5daf, 0.9);
+    graphics.fillCircle(20, 18, 11);
+    graphics.fillStyle(0xd18b62, 0.9);
+    graphics.fillCircle(20, 18, 6);
+    graphics.fillStyle(0xffd28d, 1);
+    graphics.fillCircle(20, 18, 2.6);
+    graphics.lineStyle(2, 0x9e6ab8, 0.8);
+    graphics.strokeCircle(20, 20, 16);
+    graphics.generateTexture(TEXTURE_KEYS.ASH_WISP, 40, 40);
+    graphics.clear();
+
+    graphics.fillStyle(0x111617, 0.9);
+    graphics.fillRoundedRect(5, 8, 42, 42, 8);
+    graphics.fillStyle(0x515b5b, 1);
+    graphics.fillRoundedRect(8, 5, 36, 40, 7);
+    graphics.fillStyle(0x30393a, 1);
+    graphics.fillRect(12, 11, 28, 27);
+    graphics.lineStyle(3, 0xc45e4c, 0.9);
+    graphics.lineBetween(14, 15, 24, 24);
+    graphics.lineBetween(24, 24, 18, 35);
+    graphics.lineBetween(24, 24, 37, 18);
+    graphics.fillStyle(0xe37a59, 1);
+    graphics.fillCircle(18, 17, 2);
+    graphics.fillCircle(34, 17, 2);
+    graphics.generateTexture(TEXTURE_KEYS.STONE_WARDEN, 52, 52);
+    graphics.clear();
+
+    graphics.fillStyle(0x6e376e, 0.55);
+    graphics.fillCircle(8, 8, 8);
+    graphics.fillStyle(0xd77f61, 0.95);
+    graphics.fillCircle(8, 8, 5);
+    graphics.fillStyle(0xffdda1, 1);
+    graphics.fillCircle(8, 8, 2);
+    graphics.generateTexture(TEXTURE_KEYS.ASH_PROJECTILE, 16, 16);
     graphics.destroy();
   }
 }

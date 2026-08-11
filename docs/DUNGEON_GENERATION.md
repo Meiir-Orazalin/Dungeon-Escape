@@ -72,6 +72,10 @@ Spawn and destination always use different rooms, are walkable, and are reachabl
 
 Phase 2 generated and validated the destination metadata without rendering a gate or objective. Phase 3 now consumes that unchanged metadata as the Ancient Gate position. This later use does not retroactively make the gate part of the published Phase 2 release, and the Phase 2 layout fingerprint remains structural.
 
+### Cross-phase use in Phase 4
+
+Phase 4 consumes validated room bounds and walkable tiles for deterministic enemy placement. Encounter planning has its own `ec-xxxxxxxx` fingerprint and does not alter the Phase 2 layout model or structural fingerprint. This later use does not retroactively make enemies part of the published Phase 2 release.
+
 ## Validation invariants
 
 Every candidate layout passes a dedicated pure validator before Phaser receives it. Validation checks:

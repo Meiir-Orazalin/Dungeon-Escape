@@ -1,77 +1,71 @@
 # Dungeon Escape
 
-Dungeon Escape is a deterministic dark fantasy browser game. Version `v0.3.0` adds the first complete one-floor gameplay loop: explore a generated dungeon, take the Runic Key, open the Ancient Gate, and choose whether to replay that seed or enter a new dungeon.
+Dungeon Escape is a deterministic dark-fantasy browser action game. Version `v0.4.0` surrounds the existing one-floor Runic Key and Ancient Gate objective with reproducible room encounters, three enemy archetypes, melee combat, a dash, five-point health, and player defeat.
 
-Everything visible in the game is drawn from original programmatic Phaser shapes and textures. The project loads no external art, fonts, runtime CDNs, APIs, or backend services.
+Everything visible is drawn with original programmatic Phaser shapes and textures. The project loads no external art, fonts, runtime CDNs, APIs, or backend services.
 
 ## Current playable functionality
 
-- Title menu that starts by pointer, <kbd>Enter</kbd>, or <kbd>Space</kbd>
-- Deterministic 72 × 44-tile dungeons containing 10–14 separated rooms
-- Fully connected three-tile corridors with deterministic loop connections
-- Time-based WASD and arrow-key movement with normalized diagonals
-- Generated wall rendering and merged collision geometry from one shared mask
-- A deterministic Runic Key in a third reachable room
-- The Ancient Gate at the Phase 2 destination point
-- Context-sensitive <kbd>E</kbd> interaction and sealed-gate feedback
-- Objective, key status, elapsed timer, seed, controls, and discovery HUD
-- A discovered-room minimap with hidden-until-discovered objective markers
-- A polished **Dungeon Escaped** result with replay and new-dungeon controls
+- Pointer, <kbd>Enter</kbd>, or <kbd>Space</kbd> title-menu start
+- Deterministic 72 × 44-tile dungeons with 10–14 rooms and connected three-tile corridors
+- One deterministic enemy in every non-spawn room: 9–13 enemies per dungeon
+- Bone Stalker melee pursuit, Ash Wisp projectiles, and Stone Warden charges
+- Room-local enemy activation: undiscovered enemies remain dormant and disengaged enemies return home
+- Directional sword attacks with <kbd>Space</kbd>, <kbd>J</kbd>, or a camera-correct pointer aim
+- Directional, wall-colliding, temporarily invulnerable <kbd>Shift</kbd> dash
+- Five-point player health, contact/projectile damage, hit stun, knockback, and invulnerability
+- Deterministic Runic Key and Ancient Gate objective with <kbd>E</kbd> interaction
+- Escaped and defeated overlays with same-seed replay and new-dungeon controls
+- Combat-aware HUD and discovered-only minimap objective/threat markers
 - Responsive 960 × 540 canvas over a 2304 × 1408 camera-followed world
 
-Phase 3 intentionally does not contain enemies, combat, weapons, health, damage, traps, general loot, upgrades, multiple floors, audio, scoring, best times, persistence, or virtual mobile controls.
+Enemies drop nothing. Loot, upgrades, multiple floors, bosses, traps, audio, scoring, best times, persistence, and virtual controls remain deferred.
 
-## Escape objective
+## Combat and escape loop
 
-Each validated dungeon receives one deterministic objective plan:
+1. Explore until a room is discovered and its room-bound enemy awakens.
+2. Fight with the directional sword or evade with the dash. Killing enemies is optional.
+3. Find the **Runic Key** and press <kbd>E</kbd> to take it.
+4. Reach the **Ancient Gate**. It remains sealed until the key is collected.
+5. Press <kbd>E</kbd> at the ready gate to escape—even if enemies are still alive.
+6. Replay the same deterministic run or generate a new dungeon after escape or defeat.
 
-1. Explore the dungeon and **Find the Runic Key**.
-2. Move within interaction range and press <kbd>E</kbd> to take it.
-3. Find the **Ancient Gate**. Inspecting it before collecting the key confirms that it is sealed.
-4. After the key is collected, press <kbd>E</kbd> at the gate to escape.
-5. Review the completion time and discovered-room count, then replay the same seed or generate a new dungeon.
-
-The Runic Key is a single objective item, not a general inventory system. The floor timer is session-only, freezes on completion, and does not create a score or best-time record.
+The timer freezes on either terminal outcome. Completion statistics show health and defeated enemies, but they are session information rather than a score or persistent record.
 
 ## Seed contract
 
-Use a URL seed to reproduce both the dungeon and objective plan:
+Use a URL seed to reproduce the dungeon, objective, and encounter plan:
 
 ```text
 http://127.0.0.1:5173/?seed=ember-vault_42
 ```
 
 - Letters, digits, hyphens, and underscores are preserved.
-- Seeds are normalized to lowercase ASCII and limited to 48 characters.
-- Spaces and unsupported character runs become hyphens.
-- A non-empty `?seed=` value reproduces the same rooms, corridors, spawn, key, gate, and fingerprints in this application version.
-- The normalized active seed is written to the URL with `history.replaceState` and no page reload.
-- Without a URL seed, `crypto.getRandomValues` creates a friendly seed outside the deterministic generator.
+- Seeds normalize to lowercase ASCII and are limited to 48 characters.
+- A non-empty `?seed=` reproduces the same rooms, corridors, spawn, key, gate, enemies, and three fingerprints in this application version.
+- The active seed is written with `history.replaceState` without reloading.
+- Without a URL seed, `crypto.getRandomValues` creates a friendly seed outside deterministic generation.
 
 ## Restart and new-dungeon behavior
 
-During active play and from the completion overlay:
-
-- <kbd>R</kbd> replays the complete current floor with the same seed. It restores the Runic Key, reseals the Ancient Gate, resets the timer and discovery, and returns the player to spawn while preserving both fingerprints.
-- <kbd>N</kbd> creates a new friendly seed, dungeon, objective plan, timer, and discovery state.
-- From completion, <kbd>Enter</kbd> and <kbd>Space</kbd> also create a new dungeon.
-
-This is an intentional Phase 3 extension of Phase 2, where <kbd>R</kbd> only returned the existing player to spawn.
+- <kbd>R</kbd> performs a full same-seed replay during active play or from either terminal overlay. It restores full health, dash readiness, all enemies at full health, the key, sealed gate, zero timer, spawn-only discovery, default east facing, and the original spawn while preserving layout, objective, and encounter fingerprints.
+- <kbd>N</kbd> creates a new friendly seed, dungeon, objective plan, encounter plan, and fresh runtime state.
+- From escape or defeat, <kbd>Enter</kbd> and <kbd>Space</kbd> also create a new dungeon.
 
 ## Minimap behavior
 
-Only the spawn room is visible initially. Rooms remain discovered once entered, and a corridor appears after both endpoint rooms are discovered. The current or last-entered room remains highlighted.
+Only the spawn room is initially visible. Rooms remain discovered after entry, while corridors appear after both endpoint rooms are discovered.
 
-Objective rooms are never revealed early. A discovered key room shows a Runic Key marker until collection. A discovered gate room shows a sealed marker before the key and a ready marker afterward.
+Objective and threat markers never reveal undiscovered rooms. A discovered living-enemy room has one stable threat marker, removed on death. Key and gate markers retain their discovered-only Phase 3 rules and may coexist with a threat marker.
 
 ## Technology
 
 - pnpm 11.16.0
 - Vite 8
-- Vanilla TypeScript in strict mode
+- Vanilla strict TypeScript
 - Phaser 4.2.1 with Arcade Physics
-- Vitest for movement, generation, objective, validation, discovery, interaction, and timer tests
-- Playwright with Chromium for browser gameplay tests
+- Vitest for deterministic generation, objective, encounter, combat, AI, and helper tests
+- Playwright with Chromium for real browser gameplay paths
 - ESLint and Prettier
 
 ## Prerequisites
@@ -84,11 +78,6 @@ Objective rooms are never revealed early. A discovered key room shows a Runic Ke
 ```bash
 corepack enable
 pnpm install --frozen-lockfile
-```
-
-Install the project-local Chromium binary before browser tests:
-
-```bash
 pnpm test:e2e:install
 ```
 
@@ -121,22 +110,22 @@ pnpm test:e2e
 pnpm check
 ```
 
-`pnpm check` runs formatting, ESLint, strict TypeScript, unit tests, and a production build. `pnpm test:e2e` builds production assets before Chromium runs so the suite can audit test-bridge isolation.
-
-Use `pnpm test` for Vitest watch mode and `pnpm format` to format the repository.
+`pnpm check` runs formatting, ESLint, strict TypeScript, unit tests, and a production build. `pnpm test:e2e` builds production assets before Chromium runs and audits test-bridge isolation. Use `pnpm test` for Vitest watch mode and `pnpm format` to format the repository.
 
 ## Controls
 
-| Context      | Action                 | Controls                            |
-| ------------ | ---------------------- | ----------------------------------- |
-| Menu         | Start                  | Enter, Space, or **Start Game**     |
-| Active floor | Move                   | WASD or arrow keys                  |
-| Active floor | Interact               | E                                   |
-| Active floor | Replay current seed    | R                                   |
-| Active floor | Generate a new dungeon | N                                   |
-| Completion   | Replay this seed       | R or **Replay This Seed**           |
-| Completion   | Generate a new dungeon | N, Enter, Space, or **New Dungeon** |
+| Context              | Action                 | Controls                            |
+| -------------------- | ---------------------- | ----------------------------------- |
+| Menu                 | Start                  | Enter, Space, or **Start Game**     |
+| Active floor         | Move                   | WASD or arrow keys                  |
+| Active floor         | Sword attack           | Space, J, or left pointer button    |
+| Active floor         | Dash                   | Shift                               |
+| Active floor         | Interact               | E                                   |
+| Active floor         | Replay current seed    | R                                   |
+| Active floor         | Generate a new dungeon | N                                   |
+| Completion or defeat | Replay this seed       | R or **Replay This Seed**           |
+| Completion or defeat | Generate a new dungeon | N, Enter, Space, or **New Dungeon** |
 
 ## Project status
 
-Phase 3 — Deterministic Escape Objective is implemented. See [the objective contract](docs/ESCAPE_OBJECTIVE.md), [the generation contract](docs/DUNGEON_GENERATION.md), [the implementation plan](docs/IMPLEMENTATION_PLAN.md), and [the phase status](docs/PHASE_STATUS.md).
+Phase 4 — Deterministic Enemies and Combat is implemented. See [combat and enemies](docs/COMBAT_AND_ENEMIES.md), [the escape-objective contract](docs/ESCAPE_OBJECTIVE.md), [the generation contract](docs/DUNGEON_GENERATION.md), [the implementation plan](docs/IMPLEMENTATION_PLAN.md), and [the phase status](docs/PHASE_STATUS.md).

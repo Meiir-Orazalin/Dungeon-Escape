@@ -4,7 +4,11 @@
 
 Phase 3 turns one deterministic Phase 2 dungeon into a complete single-floor escape loop. The player finds and takes a Runic Key, reaches the Ancient Gate, and interacts with the ready gate to complete the floor. Objective planning, validation, state transitions, proximity rules, marker derivation, and time formatting remain pure TypeScript; Phaser owns rendering, input, feedback, and scene lifecycle.
 
-No general inventory, combat, enemy, health, scoring, persistence, or multi-floor system is introduced.
+No general inventory, scoring, persistence, or multi-floor system is introduced by the objective contract.
+
+### Cross-phase use in Phase 4
+
+Phase 3 created and published the one-floor key-and-gate objective without combat. Phase 4 adds deterministic enemies, player health, and defeat around that unchanged objective plan. Enemies do not change `eo-xxxxxxxx`, may all be evaded, and never gate Ancient Gate completion. Their later integration does not retroactively make enemies part of the Phase 3 release.
 
 ## Planning pipeline
 
@@ -135,7 +139,7 @@ The minimap redraws only after room discovery/current-room or objective state ch
 
 ## Completion overlay
 
-The camera-fixed overlay keeps the dungeon behind a dark veil and shows **Dungeon Escaped**, seed, frozen completion time, and discovered rooms. Controls are:
+The camera-fixed overlay keeps the dungeon behind a dark veil and shows **Dungeon Escaped**, seed, frozen completion time, discovered rooms, remaining health, and enemies defeated. The last two statistics are Phase 4 session information, not score. Controls are:
 
 - <kbd>R</kbd> or **Replay This Seed**: same-seed fresh floor;
 - <kbd>N</kbd>, <kbd>Enter</kbd>, <kbd>Space</kbd>, or **New Dungeon**: new seed and floor.
@@ -144,10 +148,10 @@ Camera-fixed input zones provide pointer hover, pressed feedback, and guarded si
 
 ## E2E bridge and production isolation
 
-E2E mode exposes read-only objective state plus one narrow action: `teleportToTarget("spawn" | "key" | "gate")`. It moves the normal named player body to a normal named target and clears velocity. It cannot supply arbitrary coordinates or mutate objective state; Playwright must still press <kbd>E</kbd> through the real interaction path.
+E2E mode exposes read-only objective state plus one narrow objective action: `teleportToTarget("spawn" | "key" | "gate")`. It moves the normal named player body to a normal named target and clears velocity. Phase 4 adds separately constrained enemy-relative actions documented in `COMBAT_AND_ENEMIES.md`. None can supply arbitrary coordinates or mutate objective/combat state; Playwright must still press <kbd>E</kbd> through the real interaction path.
 
 The bridge is dynamically imported only in Vite E2E mode. Production assets are audited to exclude `__DUNGEON_ESCAPE_E2E__`, `installE2EBridge`, and `teleportToTarget`.
 
 ## Intentionally deferred
 
-Enemies, attacks, weapons, health, damage, death, traps, combat AI, coins, treasure chests, potions, general loot, inventory screens, equipment, upgrades, multiple floors, difficulty scaling, bosses, scoring, best times, persistent progression, audio, and virtual mobile movement remain later-phase work.
+Traps, coins, treasure chests, potions, general loot, inventory screens, equipment, upgrades, multiple weapons, multiple floors, difficulty scaling, bosses, scoring, best times, persistent progression, audio, and virtual mobile movement remain later-phase work.

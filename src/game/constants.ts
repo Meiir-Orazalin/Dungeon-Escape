@@ -14,4 +14,8 @@ export const TEXTURE_KEYS = Object.freeze({
   FLOOR: "dungeon-floor",
   STONE: "dungeon-stone",
   PLAYER: "dungeon-player",
+  BONE_STALKER: "enemy-bone-stalker",
+  ASH_WISP: "enemy-ash-wisp",
+  STONE_WARDEN: "enemy-stone-warden",
+  ASH_PROJECTILE: "enemy-ash-projectile",
 });

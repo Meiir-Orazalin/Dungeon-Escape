@@ -208,10 +208,10 @@ body::before {
   justify-content: center;
   width: min(100%, 960px);
   min-height: 48px;
-  gap: 18px;
+  gap: 12px;
   padding-top: clamp(10px, 1.8vh, 19px);
   color: var(--muted);
-  font-size: 0.67rem;
+  font-size: 0.59rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -268,8 +268,8 @@ body::before {
   }
 
   .control-strip {
-    gap: 10px;
-    font-size: 0.57rem;
+    gap: 7px;
+    font-size: 0.5rem;
   }
 
   .divider {
