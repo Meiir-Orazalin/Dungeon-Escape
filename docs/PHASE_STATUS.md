@@ -4,7 +4,7 @@
 
 - **Version:** `v0.3.0`
 - **Current phase:** Phase 3 — Deterministic Escape Objective
-- **Phase state:** Complete and verified; release commits pending
+- **Phase state:** Complete and verified; final phase-record commit and release publication pending
 
 ## Completed Phase 3 requirements
 
@@ -96,7 +96,7 @@ The production audit searches built JavaScript for `__DUNGEON_ESCAPE_E2E__`, `in
 
 ## Release references
 
-- **Phase 3 implementation commit:** Pending the first release commit; recorded by the second commit
+- **Phase 3 implementation commit:** `594949bad53ae866726a14e9c46debb8d39c29d4`
 - **Release intent:** annotated tag `v0.3.0` at the final verified phase-record commit
 - **Remote:** `https://github.com/Meiir-Orazalin/Dungeon-Escape.git`
 
