@@ -7,6 +7,15 @@ export interface E2ESnapshot {
   readonly activeScene: string | null;
   readonly playerPosition: GameSceneSnapshot["playerPosition"] | null;
   readonly spawnPosition: GameSceneSnapshot["spawnPosition"] | null;
+  readonly seed: string | null;
+  readonly layoutFingerprint: string | null;
+  readonly roomCount: number | null;
+  readonly spawnRoomId: number | null;
+  readonly destinationRoomId: number | null;
+  readonly worldSize: GameSceneSnapshot["worldSize"] | null;
+  readonly discoveredRoomCount: number | null;
+  readonly currentRoomId: number | null;
+  readonly playerOnWalkableTile: boolean | null;
 }
 
 export interface DungeonEscapeE2EBridge {
@@ -30,6 +39,15 @@ export function installE2EBridge(game: Phaser.Game): void {
         activeScene,
         playerPosition: gameSnapshot?.playerPosition ?? null,
         spawnPosition: gameSnapshot?.spawnPosition ?? null,
+        seed: gameSnapshot?.seed ?? null,
+        layoutFingerprint: gameSnapshot?.layoutFingerprint ?? null,
+        roomCount: gameSnapshot?.roomCount ?? null,
+        spawnRoomId: gameSnapshot?.spawnRoomId ?? null,
+        destinationRoomId: gameSnapshot?.destinationRoomId ?? null,
+        worldSize: gameSnapshot?.worldSize ?? null,
+        discoveredRoomCount: gameSnapshot?.discoveredRoomCount ?? null,
+        currentRoomId: gameSnapshot?.currentRoomId ?? null,
+        playerOnWalkableTile: gameSnapshot?.playerOnWalkableTile ?? null,
       };
     },
   };

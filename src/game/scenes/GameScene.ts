@@ -1,18 +1,25 @@
 import Phaser from "phaser";
 
+import { SCENE_KEYS } from "../constants";
 import {
-  INTERIOR_OBSTACLES,
-  PLAYER_SPAWN,
-  SCENE_KEYS,
-  TEXTURE_KEYS,
-  WALL_THICKNESS,
-  WORLD_HEIGHT,
-  WORLD_WIDTH,
-  type ObstacleDefinition,
-} from "../constants";
+  createRoomDiscovery,
+  updateRoomDiscovery,
+  type RoomDiscoveryState,
+} from "../dungeon/discovery";
+import { generateDungeon } from "../dungeon/generateDungeon";
+import { isWalkableWorldPoint, tileIndex } from "../dungeon/navigation";
+import {
+  ACTIVE_SEED_REGISTRY_KEY,
+  createFriendlySeed,
+  replaceSeedInUrl,
+} from "../dungeon/seedSession";
+import type { DungeonLayout } from "../dungeon/types";
 import { Player } from "../entities/Player";
 import type { MovementInput } from "../input/movement";
+import { DungeonRenderer } from "../rendering/DungeonRenderer";
 import { announceGameState } from "../ui/announce";
+import { DungeonHud } from "../ui/DungeonHud";
+import { DungeonMinimap } from "../ui/DungeonMinimap";
 
 interface MovementKeys {
   readonly up: Phaser.Input.Keyboard.Key;
@@ -21,53 +28,84 @@ interface MovementKeys {
   readonly right: Phaser.Input.Keyboard.Key;
 }
 
+interface GameSceneData {
+  readonly seed?: string;
+}
+
 export interface GameSceneSnapshot {
   readonly playerPosition: { readonly x: number; readonly y: number };
   readonly spawnPosition: { readonly x: number; readonly y: number };
+  readonly seed: string;
+  readonly layoutFingerprint: string;
+  readonly roomCount: number;
+  readonly spawnRoomId: number;
+  readonly destinationRoomId: number;
+  readonly worldSize: { readonly width: number; readonly height: number };
+  readonly discoveredRoomCount: number;
+  readonly currentRoomId: number;
+  readonly playerOnWalkableTile: boolean;
 }
 
-const OUTER_WALLS: readonly ObstacleDefinition[] = Object.freeze([
-  { x: WORLD_WIDTH / 2, y: WALL_THICKNESS / 2, width: WORLD_WIDTH, height: WALL_THICKNESS },
-  {
-    x: WORLD_WIDTH / 2,
-    y: WORLD_HEIGHT - WALL_THICKNESS / 2,
-    width: WORLD_WIDTH,
-    height: WALL_THICKNESS,
-  },
-  { x: WALL_THICKNESS / 2, y: WORLD_HEIGHT / 2, width: WALL_THICKNESS, height: WORLD_HEIGHT },
-  {
-    x: WORLD_WIDTH - WALL_THICKNESS / 2,
-    y: WORLD_HEIGHT / 2,
-    width: WALL_THICKNESS,
-    height: WORLD_HEIGHT,
-  },
-]);
-
 export class GameScene extends Phaser.Scene {
+  private layout?: DungeonLayout;
   private player?: Player;
   private cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd?: MovementKeys;
   private restartKey?: Phaser.Input.Keyboard.Key;
-  private solids?: Phaser.Physics.Arcade.StaticGroup;
+  private newDungeonKey?: Phaser.Input.Keyboard.Key;
+  private discovery?: RoomDiscoveryState;
+  private minimap?: DungeonMinimap;
+  private hud?: DungeonHud;
+  private lastPlayerTileIndex = -1;
+  private isRegenerating = false;
 
   public constructor() {
     super(SCENE_KEYS.GAME);
   }
 
-  public create(): void {
-    this.physics.world.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
-    this.drawRoom();
-    this.createCollisionGeometry();
-    this.createTorches();
-    this.createPlayer();
+  public create(data: GameSceneData = {}): void {
+    this.isRegenerating = false;
+    const registrySeed = this.registry.get(ACTIVE_SEED_REGISTRY_KEY) as unknown;
+    const requestedSeed =
+      data.seed ?? (typeof registrySeed === "string" ? registrySeed : createFriendlySeed());
+
+    try {
+      this.layout = generateDungeon(requestedSeed);
+    } catch {
+      announceGameState("Dungeon generation failed safely. Return to the menu and try a new seed.");
+      this.scene.start(SCENE_KEYS.MENU);
+      return;
+    }
+
+    this.registry.set(ACTIVE_SEED_REGISTRY_KEY, this.layout.seed);
+    replaceSeedInUrl(this.layout.seed);
+    this.physics.world.setBounds(0, 0, this.layout.worldWidth, this.layout.worldHeight);
+
+    const renderer = new DungeonRenderer(this, this.layout);
+    renderer.build();
+    this.player = new Player(this, this.layout.spawn);
+    this.physics.add.collider(this.player, renderer.collisionGroup);
+
     this.configureCamera();
     this.registerInput();
-    this.drawHud();
-    announceGameState("Exploring the dungeon. Use WASD or arrow keys to move. Press R to restart.");
+
+    this.discovery = createRoomDiscovery(this.layout.spawnRoomId);
+    this.hud = new DungeonHud(this, this.layout);
+    this.minimap = new DungeonMinimap(this, this.layout);
+    this.minimap.update(this.discovery);
+    this.lastPlayerTileIndex = tileIndex(
+      this.layout.spawn.tileX,
+      this.layout.spawn.tileY,
+      this.layout.mapWidth,
+    );
+
+    announceGameState(
+      "Exploring a generated dungeon. Use WASD or arrow keys to move, R to return, and N for a new dungeon.",
+    );
   }
 
   public override update(): void {
-    if (!this.player || !this.cursors || !this.wasd) return;
+    if (!this.player || !this.cursors || !this.wasd || !this.layout) return;
 
     const movementInput: MovementInput = {
       up: this.cursors.up.isDown || this.wasd.up.isDown,
@@ -77,118 +115,37 @@ export class GameScene extends Phaser.Scene {
     };
 
     this.player.applyMovement(movementInput);
+    this.updateDiscovery();
   }
 
   public getTestSnapshot(): GameSceneSnapshot | null {
-    if (!this.player) return null;
+    if (!this.player || !this.layout || !this.discovery) return null;
 
     const spawnPoint = this.player.getSpawnPoint();
     return {
       playerPosition: { x: this.player.x, y: this.player.y },
       spawnPosition: { x: spawnPoint.x, y: spawnPoint.y },
+      seed: this.layout.seed,
+      layoutFingerprint: this.layout.fingerprint,
+      roomCount: this.layout.rooms.length,
+      spawnRoomId: this.layout.spawnRoomId,
+      destinationRoomId: this.layout.destinationRoomId,
+      worldSize: { width: this.layout.worldWidth, height: this.layout.worldHeight },
+      discoveredRoomCount: this.discovery.discoveredRoomIds.size,
+      currentRoomId: this.discovery.currentRoomId,
+      playerOnWalkableTile: isWalkableWorldPoint(this.layout, this.player.x, this.player.y),
     };
   }
 
-  private drawRoom(): void {
-    this.add
-      .tileSprite(WORLD_WIDTH / 2, WORLD_HEIGHT / 2, WORLD_WIDTH, WORLD_HEIGHT, TEXTURE_KEYS.FLOOR)
-      .setDepth(-10)
-      .setTint(0x9ba09b);
-
-    const floorDetails = this.add.graphics().setDepth(-8);
-    floorDetails.lineStyle(2, 0x2b3435, 0.45);
-
-    const cracks = [
-      [170, 125, 228, 102],
-      [460, 338, 515, 365],
-      [790, 590, 845, 565],
-      [1040, 105, 1110, 132],
-      [1070, 640, 1150, 615],
-    ] as const;
-
-    cracks.forEach(([x1, y1, x2, y2]) => {
-      floorDetails.beginPath();
-      floorDetails.moveTo(x1, y1);
-      floorDetails.lineTo((x1 + x2) / 2, y1 + 12);
-      floorDetails.lineTo(x2, y2);
-      floorDetails.strokePath();
-    });
-  }
-
-  private createCollisionGeometry(): void {
-    this.solids = this.physics.add.staticGroup();
-
-    [...OUTER_WALLS, ...INTERIOR_OBSTACLES].forEach((definition, index) => {
-      const solid = this.physics.add
-        .staticImage(definition.x, definition.y, TEXTURE_KEYS.STONE)
-        .setDisplaySize(definition.width, definition.height)
-        .setDepth(2)
-        .setTint(index < OUTER_WALLS.length ? 0x8b9290 : 0xa0a6a1);
-      solid.refreshBody();
-      this.solids?.add(solid);
-
-      this.add
-        .rectangle(
-          definition.x,
-          definition.y,
-          definition.width - 5,
-          definition.height - 5,
-          0x000000,
-          0,
-        )
-        .setStrokeStyle(2, 0x596161, 0.45)
-        .setDepth(3);
-    });
-  }
-
-  private createTorches(): void {
-    const torchPositions = [
-      { x: 70, y: 160 },
-      { x: 70, y: 560 },
-      { x: 510, y: 70 },
-      { x: 850, y: 70 },
-      { x: 1210, y: 255 },
-      { x: 1210, y: 590 },
-    ] as const;
-
-    torchPositions.forEach((position, index) => {
-      const glow = this.add
-        .circle(position.x, position.y, 54, 0xe69b42, 0.09)
-        .setBlendMode(Phaser.BlendModes.ADD)
-        .setDepth(3);
-      this.add.circle(position.x, position.y, 8, 0x9e502b, 0.9).setDepth(4);
-      this.add.circle(position.x, position.y - 3, 4, 0xffdda0, 1).setDepth(4);
-
-      this.tweens.add({
-        targets: glow,
-        scale: 1.16,
-        alpha: 0.14,
-        duration: 780 + index * 43,
-        yoyo: true,
-        repeat: -1,
-        ease: "Sine.easeInOut",
-      });
-    });
-  }
-
-  private createPlayer(): void {
-    if (!this.solids) {
-      throw new Error("Collision geometry must be created before the player.");
-    }
-
-    this.player = new Player(this, PLAYER_SPAWN);
-    this.physics.add.collider(this.player, this.solids);
-  }
-
   private configureCamera(): void {
-    if (!this.player) return;
+    if (!this.player || !this.layout) return;
 
     const camera = this.cameras.main;
-    camera.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
-    camera.setBackgroundColor(0x080b0d);
-    camera.startFollow(this.player, true, 0.09, 0.09);
-    camera.setDeadzone(240, 130);
-    camera.fadeIn(260, 7, 10, 11);
+    camera.setBounds(0, 0, this.layout.worldWidth, this.layout.worldHeight);
+    camera.setBackgroundColor(0x050709);
+    camera.startFollow(this.player, true, 0.1, 0.1);
+    camera.setDeadzone(230, 125);
+    camera.fadeIn(220, 5, 7, 9);
   }
 
   private registerInput(): void {
@@ -206,42 +163,50 @@ export class GameScene extends Phaser.Scene {
       right: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.D),
     };
     this.restartKey = keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.R);
+    this.newDungeonKey = keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.N);
     this.restartKey.on("down", this.restartPlayer, this);
+    this.newDungeonKey.on("down", this.generateNewDungeon, this);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.cleanUpInput, this);
   }
 
   private restartPlayer(): void {
-    this.player?.resetToSpawn();
-    this.cameras.main.flash(120, 198, 155, 92, false);
-    announceGameState("Explorer returned to the dungeon entrance.");
+    if (!this.player) return;
+    this.player.resetToSpawn();
+    this.cameras.main.centerOn(this.player.x, this.player.y);
+    this.cameras.main.flash(110, 198, 155, 92, false);
+    announceGameState("Explorer returned to this dungeon's entrance. The seed is unchanged.");
+  }
+
+  private generateNewDungeon(): void {
+    if (this.isRegenerating || !this.layout) return;
+    this.isRegenerating = true;
+    const seed = createFriendlySeed(this.layout.seed);
+    this.registry.set(ACTIVE_SEED_REGISTRY_KEY, seed);
+    replaceSeedInUrl(seed);
+    this.scene.restart({ seed });
   }
 
   private cleanUpInput(): void {
     this.restartKey?.off("down", this.restartPlayer, this);
+    this.newDungeonKey?.off("down", this.generateNewDungeon, this);
     this.cursors = undefined;
     this.wasd = undefined;
     this.restartKey = undefined;
+    this.newDungeonKey = undefined;
   }
 
-  private drawHud(): void {
-    const hud = this.add.container(26, 24).setScrollFactor(0).setDepth(20);
-    const plate = this.add
-      .rectangle(0, 0, 210, 54, 0x080b0d, 0.78)
-      .setOrigin(0)
-      .setStrokeStyle(1, 0xb88c52, 0.38);
-    const label = this.add.text(16, 11, "THE SUNKEN ANTECHAMBER", {
-      color: "#c7ad7f",
-      fontFamily: "Arial, sans-serif",
-      fontSize: "11px",
-      fontStyle: "bold",
-      letterSpacing: 1.4,
-    });
-    const hint = this.add.text(16, 31, "R  ·  RETURN TO ENTRANCE", {
-      color: "#748082",
-      fontFamily: "Arial, sans-serif",
-      fontSize: "10px",
-      letterSpacing: 1,
-    });
-    hud.add([plate, label, hint]);
+  private updateDiscovery(): void {
+    if (!this.player || !this.layout || !this.discovery) return;
+    const tileX = Math.floor(this.player.x / this.layout.tileSize);
+    const tileY = Math.floor(this.player.y / this.layout.tileSize);
+    const currentTileIndex = tileIndex(tileX, tileY, this.layout.mapWidth);
+    if (currentTileIndex === this.lastPlayerTileIndex) return;
+    this.lastPlayerTileIndex = currentTileIndex;
+
+    const nextDiscovery = updateRoomDiscovery(this.discovery, this.layout.rooms, tileX, tileY);
+    if (nextDiscovery === this.discovery) return;
+    this.discovery = nextDiscovery;
+    this.minimap?.update(nextDiscovery);
+    this.hud?.updateDiscovered(nextDiscovery.discoveredRoomIds.size, this.layout.rooms.length);
   }
 }

@@ -1,19 +1,46 @@
 # Dungeon Escape
 
-Dungeon Escape is a dark fantasy browser game about finding a way through hostile underground halls. Version `v0.1.0` is the Phase 1 foundation: a deliberately small, polished movement prototype with a title menu and one handcrafted dungeon room.
+Dungeon Escape is a dark fantasy browser game about exploring hostile underground halls. Version `v0.2.0` replaces the original handcrafted room with deterministic procedural dungeons while preserving the Phase 1 menu, movement, collision, restart, and responsive presentation.
 
 Everything visible in the game is drawn from programmatically generated Phaser textures and shapes. The project does not load external art, fonts, runtime CDNs, APIs, or backend services.
 
 ## Current playable functionality
 
 - Title menu that starts by pointer, <kbd>Enter</kbd>, or <kbd>Space</kbd>
-- One 1280 × 720 dungeon room viewed through a lightly following 960 × 540 camera
-- Time-based movement using WASD or the arrow keys
-- Simultaneous directional input with normalized diagonal speed
-- Solid outer walls and seven solid interior obstacles
-- Directional player feedback, torch accents, and subtle floor variation
-- Instant return to the original spawn point with <kbd>R</kbd>
-- Responsive, centered 16:9 canvas with a no-scroll page shell
+- Deterministic 72 × 44-tile dungeons containing 10–14 separated rooms
+- Fully connected three-tile corridors with a few deterministic loop connections
+- Time-based movement using WASD or the arrow keys, including normalized diagonals
+- Generated wall collision derived from the same mask used for rendering
+- Camera-followed 2304 × 1408 worlds viewed through a responsive 960 × 540 canvas
+- Safe room-centre spawning and exact same-layout restart with <kbd>R</kbd>
+- New seeded dungeon generation with <kbd>N</kbd>
+- A camera-fixed minimap that reveals rooms as they are entered
+- Current seed and discovered-room count in the in-game HUD
+
+Phase 2 intentionally has no keys, actionable exit, objective, enemies, combat, health, loot, upgrades, floor transitions, victory, or game-over systems. Objectives and combat remain future phases.
+
+## Seed contract
+
+Use a URL seed to reproduce a dungeon:
+
+```text
+http://127.0.0.1:5173/?seed=ember-vault_42
+```
+
+Seed behavior:
+
+- Accepted seed characters are letters, digits, hyphens, and underscores.
+- Seeds are trimmed, normalized to lowercase ASCII, and limited to 48 characters.
+- Spaces and unsupported character runs become hyphens.
+- A non-empty `?seed=` value reproduces the same rooms, corridors, spawn, metadata, and fingerprint in this application version.
+- The normalized active seed is written back to the URL without reloading.
+- Without a URL seed, the browser creates a friendly seed using `crypto.getRandomValues`; that seed then drives the entire deterministic pipeline.
+- <kbd>R</kbd> returns to the current layout's spawn without changing its seed or fingerprint.
+- <kbd>N</kbd> creates a new friendly seed and safely restarts the scene with a new layout.
+
+## Minimap behavior
+
+Only the spawn room is visible initially. Entering another room discovers it permanently for the current dungeon. The current or last-entered room is highlighted; while travelling through a corridor, that last room remains current. A corridor appears only after both rooms it connects have been discovered. Future destination metadata is never shown as an objective.
 
 ## Technology
 
@@ -21,14 +48,14 @@ Everything visible in the game is drawn from programmatically generated Phaser t
 - Vite 8
 - Vanilla TypeScript in strict mode
 - Phaser 4.2.1 with Arcade Physics
-- Vitest for pure movement tests
+- Vitest for movement, generation, validation, and discovery tests
 - Playwright with Chromium for browser smoke tests
 - ESLint and Prettier
 
 ## Prerequisites
 
 - Node.js `20.19.0` or newer, or `22.12.0` or newer
-- pnpm `11.16.0` (Corepack can provide the package-manager version declared in `package.json`)
+- pnpm `11.16.0` (Corepack can provide the version declared in `package.json`)
 
 ## Installation
 
@@ -74,21 +101,20 @@ pnpm test:e2e
 pnpm check
 ```
 
-`pnpm check` runs the non-browser quality gates: formatting, ESLint, strict TypeScript, unit tests, and a production build. Playwright is kept as a separate required local smoke test because it needs an installed browser.
+`pnpm check` runs formatting, ESLint, strict TypeScript, unit tests, and a production build. `pnpm test:e2e` also creates a production build before running Chromium so it can verify that the test-only bridge is absent from production assets.
 
 Use `pnpm test` for Vitest watch mode and `pnpm format` to format the repository.
 
 ## Controls
 
-| Action           | Controls                                       |
-| ---------------- | ---------------------------------------------- |
-| Move             | WASD or arrow keys                             |
-| Move diagonally  | Hold one horizontal and one vertical direction |
-| Start from menu  | Enter, Space, or select **Start Game**         |
-| Restart at spawn | R                                              |
+| Action                  | Controls                                       |
+| ----------------------- | ---------------------------------------------- |
+| Move                    | WASD or arrow keys                             |
+| Move diagonally         | Hold one horizontal and one vertical direction |
+| Start from menu         | Enter, Space, or select **Start Game**         |
+| Return to current spawn | R                                              |
+| Generate a new dungeon  | N                                              |
 
 ## Project status
 
-Phase 1 — Foundation and Playable Movement Prototype is implemented. Later systems such as procedural dungeon generation, escape objectives, enemies, combat, loot, upgrades, and multi-floor runs remain explicitly deferred to their planned phases.
-
-See [the implementation plan](docs/IMPLEMENTATION_PLAN.md) and [the verified phase status](docs/PHASE_STATUS.md) for scope and evidence.
+Phase 2 — Deterministic Procedural Dungeon Generation is implemented. See [the generation contract](docs/DUNGEON_GENERATION.md), [the implementation plan](docs/IMPLEMENTATION_PLAN.md), and [the verified phase status](docs/PHASE_STATUS.md) for details and evidence.

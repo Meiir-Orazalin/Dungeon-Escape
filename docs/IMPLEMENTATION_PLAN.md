@@ -4,15 +4,15 @@ Dungeon Escape is planned as eight incremental phases. Each phase must preserve 
 
 ## Phase 1 — Foundation and movement
 
-**Status: Current implementation scope**
+**Status: Complete**
 
 Establish the pnpm, Vite, strict TypeScript, and Phaser project; create the responsive page shell, Boot/Menu/Game scene flow, one handcrafted room, normalized keyboard movement, collision geometry, restart behaviour, automated quality gates, browser smoke tests, and project documentation.
 
 ## Phase 2 — Dungeon generation
 
-**Status: Deferred**
+**Status: Complete — current release scope**
 
-Replace the single handcrafted layout with deterministic room-and-corridor generation. Add generation validation, reproducible seeds, navigability checks, safe spawn placement, and test coverage without introducing objectives or combat.
+Replace the single handcrafted layout with deterministic room-and-corridor generation. Add generation validation, reproducible URL seeds, navigability checks, safe graph-diameter spawn placement, generated collision, new-dungeon controls, discovered-room minimap behavior, and structural test coverage without introducing objectives or combat.
 
 ## Phase 3 — Escape objective
 

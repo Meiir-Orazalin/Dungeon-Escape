@@ -59,12 +59,17 @@ export class MenuScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.add
-      .text(GAME_WIDTH / 2, 225, "Wake the old halls. Find your footing. Survive the dark.", {
-        color: "#8f9b9d",
-        fontFamily: "Georgia, Times New Roman, serif",
-        fontSize: "17px",
-        fontStyle: "italic",
-      })
+      .text(
+        GAME_WIDTH / 2,
+        225,
+        "Every seed reshapes the halls. No two descents need be the same.",
+        {
+          color: "#8f9b9d",
+          fontFamily: "Georgia, Times New Roman, serif",
+          fontSize: "17px",
+          fontStyle: "italic",
+        },
+      )
       .setOrigin(0.5);
 
     const buttonPlate = this.add
@@ -107,7 +112,7 @@ export class MenuScene extends Phaser.Scene {
       .rectangle(0, 0, 520, 62, 0x0b0f11, 0.54)
       .setStrokeStyle(1, 0x536164, 0.3);
     const controlText = this.add
-      .text(0, 0, "WASD / ARROW KEYS   ·   MOVE       R   ·   RESTART", {
+      .text(0, 0, "WASD / ARROWS  ·  MOVE     R  ·  RETURN     N  ·  NEW DUNGEON", {
         color: "#a7b0af",
         fontFamily: "Arial, sans-serif",
         fontSize: "13px",
