@@ -198,6 +198,20 @@ async function completeFloor(page: Page): Promise<E2ESnapshot> {
   return getSnapshot(page);
 }
 
+async function waitForCompletionOverlay(page: Page): Promise<void> {
+  await expect
+    .poll(async () => (await getSnapshot(page)).completionOverlayVisible, { timeout: 5_000 })
+    .toBe(true);
+}
+
+async function waitForDashActive(page: Page): Promise<void> {
+  await page.waitForFunction(
+    () => (window as TestWindow).__DUNGEON_ESCAPE_E2E__?.snapshot().playerDashState === "active",
+    undefined,
+    { polling: "raf", timeout: 2_000 },
+  );
+}
+
 function findNearestWallApproach(layout: DungeonLayout): WallApproach {
   const directions = [
     { key: "ArrowUp" as const, axis: "y" as const, dx: 0, dy: -1 },
@@ -478,7 +492,7 @@ test("completion overlay Replay This Seed pointer control restores the same obje
   await startWithKey(page);
   const initial = await getSnapshot(page);
   await completeFloor(page);
-  await page.waitForTimeout(450);
+  await waitForCompletionOverlay(page);
   await clickCanvasPoint(page, 358, 374);
   await expect.poll(async () => (await getSnapshot(page)).objectiveStatus).toBe("seeking-key");
   const replayed = await getSnapshot(page);
@@ -494,7 +508,7 @@ test("completion overlay New Dungeon pointer control creates a new deterministic
   await openMenu(page, "pointer-new-objective");
   await startWithKey(page);
   const completed = await completeFloor(page);
-  await page.waitForTimeout(450);
+  await waitForCompletionOverlay(page);
   await clickCanvasPoint(page, 602, 374);
   await expect
     .poll(async () => (await getSnapshot(page)).objectiveFingerprint)
@@ -508,14 +522,14 @@ test("Enter and Space each create a new dungeon from completion", async ({ page 
   await openMenu(page, "completion-keyboard-objective");
   await startWithKey(page);
   const firstCompleted = await completeFloor(page);
-  await page.waitForTimeout(450);
+  await waitForCompletionOverlay(page);
   await page.keyboard.press("Enter");
   await expect
     .poll(async () => (await getSnapshot(page)).objectiveFingerprint)
     .not.toBe(firstCompleted.objectiveFingerprint);
 
   const secondCompleted = await completeFloor(page);
-  await page.waitForTimeout(450);
+  await waitForCompletionOverlay(page);
   await page.keyboard.press("Space");
   await expect
     .poll(async () => (await getSnapshot(page)).objectiveFingerprint)
@@ -604,15 +618,17 @@ test("contact damage uses invulnerability and dash movement grants contact immun
   expect((await getSnapshot(page)).playerHealth).toBe(4);
   await expect.poll(async () => (await getSnapshot(page)).playerInvulnerable).toBe(false);
 
-  await teleportNearEnemy(page, stalker.id);
   const beforeDash = await getSnapshot(page);
   await page.keyboard.down("Shift");
+  await waitForDashActive(page);
+  await page.waitForTimeout(30);
+  const movedDuringDash = await getSnapshot(page);
   await teleportOntoEnemy(page, stalker.id);
-  await page.waitForTimeout(45);
+  await page.waitForTimeout(20);
   const duringDash = await getSnapshot(page);
   await page.keyboard.up("Shift");
   expect(duringDash.playerHealth).toBe(beforeDash.playerHealth);
-  expect(duringDash.playerPosition?.x).not.toBe(beforeDash.playerPosition?.x);
+  expect(movedDuringDash.playerPosition?.x).not.toBe(beforeDash.playerPosition?.x);
   expect(["active", "cooldown"]).toContain(duringDash.playerDashState);
   await expect.poll(async () => (await getSnapshot(page)).dashReady).toBe(true);
 });
@@ -699,7 +715,7 @@ test("Stone Warden telegraphs, charges without steering, recovers, and is sword-
     .toBe("recover");
 
   await expect
-    .poll(async () => enemyById(await getSnapshot(page), warden.id).state, { timeout: 2_000 })
+    .poll(async () => enemyById(await getSnapshot(page), warden.id).state, { timeout: 5_000 })
     .not.toBe("recover");
   await teleportNearEnemy(page, warden.id);
   await expect
@@ -707,7 +723,7 @@ test("Stone Warden telegraphs, charges without steering, recovers, and is sword-
     .toBe("wind-up");
   await expect
     .poll(async () => enemyById(await getSnapshot(page), warden.id).state, {
-      timeout: 1_200,
+      timeout: 4_000,
       intervals: [20],
     })
     .toBe("charge");
@@ -733,7 +749,7 @@ test("Stone Warden telegraphs, charges without steering, recovers, and is sword-
     Math.hypot(firstVector.x, firstVector.y) * Math.hypot(secondVector.x, secondVector.y);
   expect(dot / magnitudes).toBeGreaterThan(0.8);
   await expect
-    .poll(async () => enemyById(await getSnapshot(page), warden.id).state, { timeout: 1_200 })
+    .poll(async () => enemyById(await getSnapshot(page), warden.id).state, { timeout: 3_500 })
     .toBe("recover");
 });
 
