@@ -4,7 +4,7 @@
 
 - **Version:** `v0.2.0`
 - **Current phase:** Phase 2 — Deterministic Procedural Dungeon Generation
-- **Phase state:** Implemented and verified; release commits pending
+- **Phase state:** Complete and verified; release tag and push pending
 
 ## Completed Phase 2 requirements
 
@@ -98,8 +98,8 @@ The production bridge isolation audit searches `dist` for `__DUNGEON_ESCAPE_E2E_
 
 ## Release references
 
-- **Phase 2 implementation commit:** Pending the first release commit; recorded by the second commit
-- **Release intent:** annotated tag `v0.2.0` at the final documentation commit
+- **Phase 2 implementation commit:** `a03456a1c0f71d73d1f79b610a373ead4aaff08b`
+- **Release tag:** annotated tag `v0.2.0`, created at the verified phase-record commit after this document is committed
 - **Remote:** `https://github.com/Meiir-Orazalin/Dungeon-Escape.git`
 
 Historical note: published tag `v0.1.0` remains at `819765fd0d5b5d80c1c3f083700f0f82112deecc`. Phase 2 must not move, delete, recreate, or force-update it.
