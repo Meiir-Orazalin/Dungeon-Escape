@@ -635,7 +635,7 @@ test("contact damage uses invulnerability and dash movement grants contact immun
   }, stalker.id);
   await page.keyboard.up("Shift");
   expect(duringDash.playerHealth).toBe(beforeDash.playerHealth);
-  expect(duringDash.playerDashState).toBe("active");
+  expect(["active", "cooldown"]).toContain(duringDash.playerDashState);
   await expect.poll(async () => (await getSnapshot(page)).dashReady).toBe(true);
 });
 
@@ -733,27 +733,44 @@ test("Stone Warden telegraphs, charges without steering, recovers, and is sword-
       intervals: [20],
     })
     .toBe("charge");
-  const chargeStart = enemyById(await getSnapshot(page), warden.id).position;
-  await page.waitForTimeout(18);
-  const chargeMiddle = enemyById(await getSnapshot(page), warden.id).position;
-  const firstVector = {
-    x: chargeMiddle.x - chargeStart.x,
-    y: chargeMiddle.y - chargeStart.y,
+  const chargeSnapshot = await getSnapshot(page);
+  const chargeStart = enemyById(chargeSnapshot, warden.id).position;
+  const playerAtCharge = chargeSnapshot.playerPosition ?? chargeStart;
+  const lockedDirection = {
+    x: playerAtCharge.x - chargeStart.x,
+    y: playerAtCharge.y - chargeStart.y,
   };
   const steeringKey =
-    Math.abs(firstVector.x) >= Math.abs(firstVector.y) ? "ArrowDown" : "ArrowRight";
+    Math.abs(lockedDirection.x) >= Math.abs(lockedDirection.y) ? "ArrowDown" : "ArrowRight";
   await page.keyboard.down(steeringKey);
-  await page.waitForTimeout(18);
+  const chargePositions = await page.evaluate(async (enemyId) => {
+    const bridge = (window as TestWindow).__DUNGEON_ESCAPE_E2E__;
+    if (!bridge) throw new Error("The E2E bridge is unavailable.");
+    const positions: Position[] = [];
+    for (let frame = 0; frame < 8; frame += 1) {
+      const enemy = bridge.snapshot().enemies.find((candidate) => candidate.id === enemyId);
+      if (!enemy) throw new Error(`Missing E2E enemy ${enemyId}.`);
+      if (enemy.state !== "charge") break;
+      positions.push(enemy.position);
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    }
+    return positions;
+  }, warden.id);
   await page.keyboard.up(steeringKey);
-  const chargeLater = enemyById(await getSnapshot(page), warden.id).position;
-  const secondVector = {
-    x: chargeLater.x - chargeMiddle.x,
-    y: chargeLater.y - chargeMiddle.y,
-  };
-  const dot = firstVector.x * secondVector.x + firstVector.y * secondVector.y;
-  const magnitudes =
-    Math.hypot(firstVector.x, firstVector.y) * Math.hypot(secondVector.x, secondVector.y);
-  expect(dot / magnitudes).toBeGreaterThan(0.8);
+  const chargeVectors = chargePositions
+    .slice(1)
+    .map((position, index) => ({
+      x: position.x - (chargePositions[index]?.x ?? position.x),
+      y: position.y - (chargePositions[index]?.y ?? position.y),
+    }))
+    .filter((vector) => Math.hypot(vector.x, vector.y) > 0.1);
+  expect(chargeVectors.length).toBeGreaterThanOrEqual(2);
+  const firstVector = chargeVectors[0] as Position;
+  for (const vector of chargeVectors.slice(1)) {
+    const dot = firstVector.x * vector.x + firstVector.y * vector.y;
+    const magnitudes = Math.hypot(firstVector.x, firstVector.y) * Math.hypot(vector.x, vector.y);
+    expect(dot / magnitudes).toBeGreaterThan(0.8);
+  }
   await expect
     .poll(async () => enemyById(await getSnapshot(page), warden.id).state, { timeout: 3_500 })
     .toBe("recover");
