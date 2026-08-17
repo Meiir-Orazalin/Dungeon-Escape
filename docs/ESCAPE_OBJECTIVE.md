@@ -10,6 +10,10 @@ No general inventory, scoring, persistence, or multi-floor system is introduced 
 
 Phase 3 created and published the one-floor key-and-gate objective without combat. Phase 4 adds deterministic enemies, player health, and defeat around that unchanged objective plan. Enemies do not change `eo-xxxxxxxx`, may all be evaded, and never gate Ancient Gate completion. Their later integration does not retroactively make enemies part of the Phase 3 release.
 
+### Cross-phase use in Phase 5
+
+Phase 5 adds optional chests, pickups, and a Runeforge without changing objective planning or `eo-xxxxxxxx`. General interaction selection still chooses the nearest eligible target and preserves key-before-gate priority on exact ties. The player may ignore every reward, and Ancient Gate completion never requires shards, chests, upgrades, or enemy clearance. These later systems were not part of the Phase 3 release.
+
 ## Planning pipeline
 
 Objective planning consumes an already generated and validated `DungeonLayout`:
@@ -98,7 +102,7 @@ Presentation effects consume reducer outcomes; the reducer never creates Phaser 
 
 ## Interaction contract
 
-The inclusive interaction boundary is 52 pixels. Squared-distance comparisons avoid square roots. Available targets are ordered by distance, with the Runic Key before the Ancient Gate as a stable exact-distance tie-breaker.
+The inclusive interaction boundary is 52 pixels. Squared-distance comparisons avoid square roots. Phase 5 orders eligible targets by distance, then key, gate, closed chest, forge, and stable ID on an exact tie. A genuinely closer chest or forge still wins. Open chests and an exhausted forge are ineligible.
 
 The <kbd>E</kbd> key has an explicit held-key guard, so browser repeat events cannot trigger repeated blocked reactions or collection. Prompt text is camera-fixed and changes only when its target changes:
 
@@ -152,6 +156,6 @@ E2E mode exposes read-only objective state plus one narrow objective action: `te
 
 The bridge is dynamically imported only in Vite E2E mode. Production assets are audited to exclude `__DUNGEON_ESCAPE_E2E__`, `installE2EBridge`, and `teleportToTarget`.
 
-## Intentionally deferred
+## Intentionally deferred after Phase 5
 
-Traps, coins, treasure chests, potions, general loot, inventory screens, equipment, upgrades, multiple weapons, multiple floors, difficulty scaling, bosses, scoring, best times, persistent progression, audio, and virtual mobile movement remain later-phase work.
+Traps, coins, general inventory screens, equipment, multiple weapons, multiple floors, difficulty scaling, bosses, scoring, best times, persistent progression, audio, and virtual mobile movement remain later-phase work. Phase 5 chests, shards, immediate flasks, and run upgrades remain optional to this objective.

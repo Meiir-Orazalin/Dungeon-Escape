@@ -4,7 +4,13 @@
 
 Phase 4 adds deterministic room encounters and keyboard-first top-down combat around the unchanged Phase 3 escape objective. Pure TypeScript owns encounter planning, fingerprints, validation, facing, melee geometry, attack/dash timing, vitality, knockback, run outcomes, AI decisions, and minimap threat derivation. Phaser owns physics, rendering, bounded effects, input, and scene lifecycle.
 
-Enemies are optional hazards. The Runic Key and Ancient Gate remain usable with living enemies, and no enemy drops an item or reward.
+Enemies are optional hazards. The Runic Key and Ancient Gate remain usable with living enemies. In the original Phase 4 releases (`v0.4.0` and `v0.4.1`) enemies dropped nothing; Phase 5 attaches a separate deterministic reward plan to their stable IDs.
+
+## Phase 5 integration
+
+Enemy AI, base health, speed, damage, encounter planning, and `ec-xxxxxxxx` meaning remain unchanged. Phase 5 looks up one planned reward by stable enemy ID after the existing single defeat callback and resolves a safe pickup point from the actual death position. Runtime timing or death coordinates never reroll contents or enter the loot fingerprint.
+
+Player upgrades derive an effective player-only configuration without mutating the Phase 4 constants documented below. With no upgrades, every combat value is identical. Tempered Edge, Long Reach, Quickened Steel, Fleet Sigil, Vital Rune, and Aegis Rune affect only their documented player fields. Enemies remain optional, and living enemies still do not block Ancient Gate completion. This later integration does not mean loot existed in either Phase 4 gameplay release.
 
 ## Player facing and attack controls
 
@@ -161,6 +167,6 @@ E2E mode retains `teleportToTarget` and adds only:
 
 Neither action changes health, attacks, cooldowns, objective state, outcome, or enemy state. Playwright must use real input and collision callbacks. Production assets are audited to exclude `__DUNGEON_ESCAPE_E2E__`, `installE2EBridge`, `teleportToTarget`, `teleportNearEnemy`, and `teleportOntoEnemy`.
 
-## Intentionally deferred
+## Intentionally deferred after Phase 5
 
-Enemy drops, coins, experience, loot, chests, potions, healing, inventories, equipment, weapon selection, upgrades, levels, skill trees, multiple floors, transitions, bosses, difficulty scaling, traps, audio, pause menus, score, best times, persistence/save games, virtual controls, and network play are not implemented.
+Coins, experience, general inventories, equipment, weapon selection, upgrade ranks, levels, skill trees, multiple floors, transitions, bosses, difficulty scaling, traps, audio, pause menus, score, best times, persistence/save games, virtual controls, and network play are not implemented. Phase 5 rewards are run-only and reset with the floor.

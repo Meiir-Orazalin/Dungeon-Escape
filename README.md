@@ -1,6 +1,6 @@
 # Dungeon Escape
 
-Dungeon Escape is a deterministic dark-fantasy browser action game. Version `v0.4.1` packages the verified Phase 4 game as a secure static GitHub Pages deployment without changing gameplay, balance, or deterministic fingerprints.
+Dungeon Escape is a deterministic dark-fantasy browser action game. Version `v0.5.0` adds deterministic Treasure Chests, enemy rewards, healing, and a two-choice run-build loop while preserving the one-floor escape objective and secure GitHub Pages deployment.
 
 Everything visible is drawn with original programmatic Phaser shapes and textures. The project loads no external art, fonts, runtime CDNs, APIs, analytics, or backend services.
 
@@ -23,21 +23,27 @@ Fixed-seed example: <https://meiirorazalin.com/?seed=production-smoke>
 - Directional, wall-colliding, temporarily invulnerable <kbd>Shift</kbd> dash
 - Five-point health, contact/projectile damage, hit stun, knockback, and invulnerability
 - Deterministic Runic Key and Ancient Gate objective with <kbd>E</kbd> interaction
+- Exactly three deterministic Treasure Chests in distinct optional rooms
+- Runic Shards from enemies and chests, plus immediate-use Vitality Flasks
+- One safe-room Runeforge with deterministic three-card offers
+- Six distinct run upgrades, with at most two purchases costing 6 then 8 shards
 - Escaped and defeated overlays with same-seed replay and new-dungeon controls
-- Combat-aware HUD and discovered-only minimap objective/threat markers
+- Loot-aware HUD and discovered-only minimap objective, threat, chest, and forge markers
 - Responsive 960 × 540 canvas over a 2304 × 1408 camera-followed world
 
-Enemies drop nothing. Phase 5 loot and upgrades remain deferred, as do multiple floors, bosses, traps, audio, scoring, persistence, and virtual controls.
+Runic Shards and upgrades exist only for the current floor. There is no general inventory or permanent progression. Multiple floors, bosses, traps, equipment, audio, scoring, persistence, virtual controls, and Phase 6 remain deferred.
 
 ## Combat, objective, and reset behavior
 
-Explore, fight or evade room-bound enemies, collect the **Runic Key** with <kbd>E</kbd>, and use <kbd>E</kbd> again at the ready **Ancient Gate**. Enemies are optional hazards: living enemies never block escape. The floor timer freezes on escape or defeat, and terminal overlays show session-only health and enemy statistics rather than a score.
+Explore, fight or evade room-bound enemies, open optional **Treasure Chests**, and collect nearby **Runic Shards**. A **Vitality Flask** heals two points only when injured. Return to the enemy-free spawn room and press <kbd>E</kbd> at the **Runeforge** to spend 6 shards on the first run upgrade and 8 on the second. Each deterministic offer contains three distinct unselected choices from Tempered Edge, Long Reach, Quickened Steel, Fleet Sigil, Vital Rune, and Aegis Rune.
 
-<kbd>R</kbd> performs a full same-seed replay with restored health, enemies, key, sealed gate, timer, discovery, facing, attack, and dash state while preserving all three deterministic fingerprints. <kbd>N</kbd> creates a new seed and complete run; <kbd>Enter</kbd> or <kbd>Space</kbd> also creates a new dungeon from a terminal overlay. Objective and threat markers remain hidden until their rooms are discovered.
+Collect the **Runic Key** with <kbd>E</kbd>, then use <kbd>E</kbd> at the ready **Ancient Gate**. Loot, upgrades, and enemy clearance remain optional. The floor timer and world pause while choosing a forge upgrade and freeze on escape or defeat; terminal overlays show session-only combat and reward statistics rather than a score.
+
+<kbd>R</kbd> performs a full same-seed replay with base health/combat, zero shards, no upgrades or pickups, closed chests, a fresh forge, restored enemies/objective, and zero timer. It preserves the layout, objective, encounter, and loot fingerprints plus deterministic offers. <kbd>N</kbd> creates a new seed and all four fresh plans; <kbd>Enter</kbd> or <kbd>Space</kbd> also creates a new dungeon from a terminal overlay. Chest and threat markers remain hidden until their rooms are discovered.
 
 ## Deterministic seed contract
 
-Letters, digits, hyphens, and underscores are preserved. Seeds normalize to lowercase ASCII and are limited to 48 characters. A non-empty `?seed=` reproduces the same layout, objective, encounter plan, and fingerprints in this application version. Without a URL seed, `crypto.getRandomValues` creates a friendly seed outside deterministic generation.
+Letters, digits, hyphens, and underscores are preserved. Seeds normalize to lowercase ASCII and are limited to 48 characters. A non-empty `?seed=` reproduces the same layout, objective, encounter plan, loot plan, chest contents, enemy rewards, upgrade offers, and four planning fingerprints in this application version. Without a URL seed, `crypto.getRandomValues` creates a friendly seed outside deterministic generation.
 
 ## Technology
 
@@ -113,6 +119,9 @@ LIVE_BASE_URL=https://meiirorazalin.com pnpm test:live
 | Active floor         | Interact               | E                                   |
 | Active floor         | Replay current seed    | R                                   |
 | Active floor         | Generate a new dungeon | N                                   |
+| Runeforge            | Highlight              | Arrow keys                          |
+| Runeforge            | Choose                 | 1, 2, 3, or Enter                   |
+| Runeforge            | Leave without purchase | Escape                              |
 | Completion or defeat | Replay this seed       | R or **Replay This Seed**           |
 | Completion or defeat | Generate a new dungeon | N, Enter, Space, or **New Dungeon** |
 
@@ -120,4 +129,4 @@ LIVE_BASE_URL=https://meiirorazalin.com pnpm test:live
 
 Every verified push to `main` runs the **Quality** and **Deploy Production** workflows. Deployment uploads only `dist`; no `gh-pages` branch or repository `CNAME` file is used. Domain, DNS, certificate, rollback, and troubleshooting procedures are documented in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
-See [combat and enemies](docs/COMBAT_AND_ENEMIES.md), [the escape-objective contract](docs/ESCAPE_OBJECTIVE.md), [the generation contract](docs/DUNGEON_GENERATION.md), [the implementation plan](docs/IMPLEMENTATION_PLAN.md), and [the milestone status](docs/PHASE_STATUS.md).
+See [loot and run upgrades](docs/LOOT_AND_UPGRADES.md), [combat and enemies](docs/COMBAT_AND_ENEMIES.md), [the escape-objective contract](docs/ESCAPE_OBJECTIVE.md), [the generation contract](docs/DUNGEON_GENERATION.md), [the implementation plan](docs/IMPLEMENTATION_PLAN.md), and [the phase status](docs/PHASE_STATUS.md).

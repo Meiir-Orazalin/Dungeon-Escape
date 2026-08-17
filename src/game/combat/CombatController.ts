@@ -3,6 +3,8 @@ import Phaser from "phaser";
 import type { Player } from "../entities/Player";
 import type { EnemyManager } from "../enemies/EnemyManager";
 import type { MovementInput } from "../input/movement";
+import { BASE_PLAYER_STATS } from "../upgrades/effectiveStats";
+import type { EffectivePlayerStats } from "../upgrades/types";
 import {
   beginAttack,
   cancelAttack,
@@ -11,13 +13,21 @@ import {
   updateAttackState,
 } from "./attackState";
 import { COMBAT_CONFIG } from "./config";
-import { beginDash, cancelDash, createReadyDashState, updateDashState } from "./dashState";
+import {
+  beginDash,
+  cancelDash,
+  clampDashCooldown,
+  createReadyDashState,
+  updateDashState,
+} from "./dashState";
 import { directionBetween } from "./facing";
 import { createKnockback, updateKnockback } from "./knockback";
 import type { AttackState, DashState, KnockbackState, PlayerVitality, Vector2 } from "./types";
 import {
   applyPlayerDamage,
   createInitialVitality,
+  healPlayer,
+  increaseMaximumHealth,
   isPlayerInvulnerable,
   updateVitality,
 } from "./vitality";
@@ -39,6 +49,7 @@ export class CombatController {
   private dashState: DashState = createReadyDashState();
   private vitality: PlayerVitality = createInitialVitality();
   private knockback: KnockbackState | null = null;
+  private effectiveStats: EffectivePlayerStats = BASE_PLAYER_STATS;
   private readonly slash: Phaser.GameObjects.Graphics;
   private active = true;
 
@@ -61,12 +72,14 @@ export class CombatController {
     this.vitality = updateVitality(this.vitality, delta);
     this.dashState = updateDashState(this.dashState, delta);
     this.knockback = updateKnockback(this.knockback, delta);
-    this.attackState = updateAttackState(this.attackState, delta);
+    this.attackState = updateAttackState(this.attackState, delta, this.effectiveStats);
     if (this.attackState.phase === "active") {
       const hits = this.enemies.applyMeleeAttack(
         { x: this.player.x, y: this.player.y },
         this.player.getFacing(),
         this.attackState.hitEnemyIds,
+        this.effectiveStats.meleeDamage,
+        this.effectiveStats.meleeRange,
       );
       this.attackState = registerAttackHits(this.attackState, hits);
     }
@@ -78,8 +91,8 @@ export class CombatController {
       this.player.stopMovement();
     } else if (this.dashState.status === "active") {
       this.player.setVelocity(
-        this.dashState.direction.x * COMBAT_CONFIG.dashSpeed,
-        this.dashState.direction.y * COMBAT_CONFIG.dashSpeed,
+        this.dashState.direction.x * this.effectiveStats.dashSpeed,
+        this.dashState.direction.y * this.effectiveStats.dashSpeed,
       );
     } else {
       this.player.applyMovement(movementInput);
@@ -92,10 +105,14 @@ export class CombatController {
   public beginFacingAttack(direction?: Vector2): boolean {
     if (!this.active || this.vitality.status !== "alive") return false;
     if (direction) this.player.setFacing(direction);
-    const next = beginAttack(this.attackState, {
-      dashing: this.dashState.status === "active",
-      hitStunned: this.vitality.hitStunRemainingMs > 0,
-    });
+    const next = beginAttack(
+      this.attackState,
+      {
+        dashing: this.dashState.status === "active",
+        hitStunned: this.vitality.hitStunRemainingMs > 0,
+      },
+      this.effectiveStats,
+    );
     if (next === this.attackState) return false;
     this.attackState = next;
     this.updateSlashVisual();
@@ -122,6 +139,7 @@ export class CombatController {
       movementDirection,
       this.player.getFacing(),
       this.vitality.hitStunRemainingMs > 0,
+      this.effectiveStats,
     );
     if (next === this.dashState) return false;
     this.attackState = cancelAttack(this.attackState);
@@ -137,6 +155,7 @@ export class CombatController {
       this.vitality,
       COMBAT_CONFIG.damagePerHit,
       this.dashState.status === "active",
+      this.effectiveStats.postHitInvulnerabilityMs,
     );
     if (transition.outcome === "ignored") return "ignored";
     this.vitality = transition.state;
@@ -165,6 +184,47 @@ export class CombatController {
       this.vitality.hitStunRemainingMs === 0 &&
       this.dashState.status !== "active"
     );
+  }
+
+  public pause(): void {
+    this.attackState = cancelAttack(this.attackState);
+    this.updateSlashVisual();
+    this.player.stopMovement();
+  }
+
+  public heal(
+    amount: number,
+  ): Readonly<{ consumed: boolean; restoredHealth: number; vitality: PlayerVitality }> {
+    if (!this.active) {
+      return Object.freeze({ consumed: false, restoredHealth: 0, vitality: this.vitality });
+    }
+    const transition = healPlayer(this.vitality, amount);
+    this.vitality = transition.state;
+    if (transition.consumed) this.callbacks.healthChanged(this.vitality);
+    return Object.freeze({
+      consumed: transition.consumed,
+      restoredHealth: transition.restoredHealth,
+      vitality: this.vitality,
+    });
+  }
+
+  public applyEffectiveStats(stats: EffectivePlayerStats, restoreForVitalRune: boolean): void {
+    const previousMaximum = this.effectiveStats.maximumHealth;
+    this.effectiveStats = stats;
+    this.dashState = clampDashCooldown(this.dashState, stats.dashCooldownMs);
+    if (stats.maximumHealth !== previousMaximum) {
+      const transition = increaseMaximumHealth(
+        this.vitality,
+        stats.maximumHealth,
+        restoreForVitalRune ? 1 : 0,
+      );
+      this.vitality = transition.state;
+      this.callbacks.healthChanged(this.vitality);
+    }
+  }
+
+  public getEffectiveStats(): EffectivePlayerStats {
+    return this.effectiveStats;
   }
 
   public stopTerminal(): void {
@@ -203,15 +263,15 @@ export class CombatController {
     if (this.attackState.phase !== "active") return;
     const facing = this.player.getFacing();
     const angle = Math.atan2(facing.y, facing.x);
-    const halfArc = (COMBAT_CONFIG.attackArcDegrees * Math.PI) / 360;
+    const halfArc = (this.effectiveStats.meleeArcDegrees * Math.PI) / 360;
     this.slash.setPosition(this.player.x, this.player.y).setRotation(angle);
     this.slash.lineStyle(7, 0xffe2a1, 0.9);
     this.slash.beginPath();
-    this.slash.arc(0, 0, COMBAT_CONFIG.attackRange, -halfArc, halfArc, false);
+    this.slash.arc(0, 0, this.effectiveStats.meleeRange, -halfArc, halfArc, false);
     this.slash.strokePath();
     this.slash.lineStyle(2, 0xffffff, 0.72);
     this.slash.beginPath();
-    this.slash.arc(0, 0, COMBAT_CONFIG.attackRange - 7, -halfArc, halfArc, false);
+    this.slash.arc(0, 0, this.effectiveStats.meleeRange - 7, -halfArc, halfArc, false);
     this.slash.strokePath();
   }
 

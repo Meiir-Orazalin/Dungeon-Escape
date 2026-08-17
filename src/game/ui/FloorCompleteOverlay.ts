@@ -13,6 +13,11 @@ interface CompletionDetails {
   readonly totalEnemies: number;
   readonly health: number;
   readonly maximumHealth: number;
+  readonly totalCollectedShards: number;
+  readonly availableShards: number;
+  readonly openedChests: number;
+  readonly totalChests: number;
+  readonly selectedUpgrades: readonly string[];
 }
 
 interface CompletionCallbacks {
@@ -67,13 +72,13 @@ export class FloorCompleteOverlay {
       .text(
         GAME_WIDTH / 2,
         246,
-        `SEED  ·  ${details.seed}\nTIME  ·  ${formatElapsedTime(details.completionTimeMs)}\nROOMS DISCOVERED  ·  ${details.discoveredRooms} / ${details.totalRooms}\nENEMIES DEFEATED  ·  ${details.defeatedEnemies} / ${details.totalEnemies}     HEALTH  ·  ${details.health} / ${details.maximumHealth}`,
+        `SEED  ·  ${details.seed}\nTIME  ·  ${formatElapsedTime(details.completionTimeMs)}\nROOMS  ·  ${details.discoveredRooms} / ${details.totalRooms}     ENEMIES  ·  ${details.defeatedEnemies} / ${details.totalEnemies}     HEALTH  ·  ${details.health} / ${details.maximumHealth}\nSHARDS COLLECTED  ·  ${details.totalCollectedShards}     AVAILABLE  ·  ${details.availableShards}     CHESTS  ·  ${details.openedChests} / ${details.totalChests}\nRUN BUILD  ·  ${details.selectedUpgrades.length === 0 ? "NONE" : details.selectedUpgrades.join(" + ")}`,
         {
           align: "center",
           color: "#b6c0bd",
           fontFamily: "Arial, sans-serif",
-          fontSize: "13px",
-          lineSpacing: 10,
+          fontSize: "12px",
+          lineSpacing: 7,
         },
       )
       .setOrigin(0.5);

@@ -11,6 +11,11 @@ interface DefeatDetails {
   readonly totalRooms: number;
   readonly defeatedEnemies: number;
   readonly totalEnemies: number;
+  readonly totalCollectedShards: number;
+  readonly availableShards: number;
+  readonly openedChests: number;
+  readonly totalChests: number;
+  readonly selectedUpgrades: readonly string[];
 }
 
 interface DefeatCallbacks {
@@ -65,13 +70,13 @@ export class PlayerDefeatedOverlay {
       .text(
         GAME_WIDTH / 2,
         248,
-        `SEED  ·  ${details.seed}\nTIME  ·  ${formatElapsedTime(details.elapsedTimeMs)}\nROOMS DISCOVERED  ·  ${details.discoveredRooms} / ${details.totalRooms}\nENEMIES DEFEATED  ·  ${details.defeatedEnemies} / ${details.totalEnemies}`,
+        `SEED  ·  ${details.seed}\nTIME  ·  ${formatElapsedTime(details.elapsedTimeMs)}\nROOMS  ·  ${details.discoveredRooms} / ${details.totalRooms}     ENEMIES  ·  ${details.defeatedEnemies} / ${details.totalEnemies}\nSHARDS COLLECTED  ·  ${details.totalCollectedShards}     AVAILABLE  ·  ${details.availableShards}     CHESTS  ·  ${details.openedChests} / ${details.totalChests}\nRUN BUILD  ·  ${details.selectedUpgrades.length === 0 ? "NONE" : details.selectedUpgrades.join(" + ")}`,
         {
           align: "center",
           color: "#b8aeb0",
           fontFamily: "Arial, sans-serif",
-          fontSize: "13px",
-          lineSpacing: 8,
+          fontSize: "12px",
+          lineSpacing: 7,
         },
       )
       .setOrigin(0.5);

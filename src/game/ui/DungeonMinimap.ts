@@ -5,6 +5,9 @@ import type { RoomDiscoveryState } from "../dungeon/discovery";
 import type { DungeonLayout, TilePoint } from "../dungeon/types";
 import { deriveThreatRoomIds } from "../encounters/minimapThreats";
 import type { EncounterPlan } from "../encounters/types";
+import { deriveLootMinimapMarkers } from "../loot/minimapLoot";
+import type { RunRewardState } from "../loot/rewardState";
+import type { LootPlan } from "../loot/types";
 import { deriveObjectiveMarkerState } from "../objective/minimapMarkers";
 import type { EscapeObjectivePlan, EscapeObjectiveState } from "../objective/types";
 
@@ -20,6 +23,7 @@ export class DungeonMinimap {
     private readonly layout: DungeonLayout,
     private readonly objectivePlan: EscapeObjectivePlan,
     private readonly encounterPlan: EncounterPlan,
+    private readonly lootPlan: LootPlan,
   ) {
     this.mapHeight = (this.mapWidth * layout.mapHeight) / layout.mapWidth;
     const container = scene.add
@@ -45,6 +49,7 @@ export class DungeonMinimap {
     discovery: RoomDiscoveryState,
     objectiveState: EscapeObjectiveState,
     aliveEnemyIds: ReadonlySet<string>,
+    rewardState: RunRewardState,
   ): void {
     const scaleX = this.mapWidth / this.layout.mapWidth;
     const scaleY = this.mapHeight / this.layout.mapHeight;
@@ -143,6 +148,42 @@ export class DungeonMinimap {
         threat.y - 3.5,
       );
     });
+
+    const forgeState =
+      rewardState.forge.status === "exhausted"
+        ? "exhausted"
+        : rewardState.forge.status === "ready" || rewardState.forge.status === "choosing"
+          ? "ready"
+          : "dormant";
+    const lootMarkers = deriveLootMinimapMarkers(
+      discovery,
+      this.lootPlan,
+      rewardState.openedChestIds,
+      forgeState,
+    );
+    lootMarkers.chestRoomIds.forEach((roomId) => {
+      const chest = this.lootPlan.chests.find((candidate) => candidate.roomId === roomId);
+      if (!chest) return;
+      const marker = point({ x: chest.position.tileX, y: chest.position.tileY });
+      this.graphics.fillStyle(0xd6a45b, 0.98);
+      this.graphics.fillRect(marker.x - 3.5, marker.y - 2.5, 7, 5);
+      this.graphics.lineStyle(1, 0xffd786, 0.9);
+      this.graphics.strokeRect(marker.x - 3.5, marker.y - 2.5, 7, 5);
+    });
+    const forge = point({
+      x: this.lootPlan.forge.position.tileX,
+      y: this.lootPlan.forge.position.tileY,
+    });
+    const forgeColor =
+      lootMarkers.forge === "ready"
+        ? 0x78e1cc
+        : lootMarkers.forge === "exhausted"
+          ? 0x657173
+          : 0x9c7544;
+    this.graphics.lineStyle(1.5, forgeColor, 1);
+    this.graphics.strokeCircle(forge.x, forge.y, 4.2);
+    this.graphics.fillStyle(forgeColor, lootMarkers.forge === "exhausted" ? 0.45 : 0.9);
+    this.graphics.fillCircle(forge.x, forge.y, 1.8);
 
     const currentRoom = this.layout.rooms.find((room) => room.id === discovery.currentRoomId);
     if (currentRoom) {

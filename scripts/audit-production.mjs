@@ -150,6 +150,9 @@ for (const identifier of [
   "teleportToTarget",
   "teleportNearEnemy",
   "teleportOntoEnemy",
+  "teleportToChest",
+  "teleportToForge",
+  "teleportToPickup",
 ]) {
   check(!textContent.includes(identifier), `${identifier} is absent`);
 }

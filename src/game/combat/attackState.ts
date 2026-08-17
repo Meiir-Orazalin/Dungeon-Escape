@@ -1,6 +1,20 @@
 import { COMBAT_CONFIG, safeDelta } from "./config";
 import type { AttackPhase, AttackState } from "./types";
 
+export interface AttackTiming {
+  readonly attackWindUpMs: number;
+  readonly attackActiveMs: number;
+  readonly attackRecoveryMs: number;
+  readonly attackCooldownMs: number;
+}
+
+const BASE_ATTACK_TIMING: AttackTiming = Object.freeze({
+  attackWindUpMs: COMBAT_CONFIG.attackWindUpMs,
+  attackActiveMs: COMBAT_CONFIG.attackActiveMs,
+  attackRecoveryMs: COMBAT_CONFIG.attackRecoveryMs,
+  attackCooldownMs: COMBAT_CONFIG.attackCooldownMs,
+});
+
 export function createReadyAttackState(): AttackState {
   return Object.freeze({
     phase: "ready",
@@ -14,12 +28,13 @@ export function createReadyAttackState(): AttackState {
 export function beginAttack(
   state: AttackState,
   blocked: Readonly<{ dashing: boolean; hitStunned: boolean }>,
+  timing: AttackTiming = BASE_ATTACK_TIMING,
 ): AttackState {
   if (state.phase !== "ready" || blocked.dashing || blocked.hitStunned) return state;
   return Object.freeze({
     phase: "wind-up",
-    phaseRemainingMs: COMBAT_CONFIG.attackWindUpMs,
-    cooldownRemainingMs: COMBAT_CONFIG.attackCooldownMs,
+    phaseRemainingMs: timing.attackWindUpMs,
+    cooldownRemainingMs: timing.attackCooldownMs,
     attackId: state.attackId + 1,
     hitEnemyIds: new Set<string>(),
   });
@@ -39,7 +54,11 @@ export function cancelAttack(state: AttackState): AttackState {
   });
 }
 
-export function updateAttackState(state: AttackState, rawDelta: number): AttackState {
+export function updateAttackState(
+  state: AttackState,
+  rawDelta: number,
+  timing: AttackTiming = BASE_ATTACK_TIMING,
+): AttackState {
   let delta = safeDelta(rawDelta);
   if (delta === 0 || state.phase === "ready") return state;
   let phase: AttackPhase = state.phase;
@@ -49,10 +68,10 @@ export function updateAttackState(state: AttackState, rawDelta: number): AttackS
     delta -= phaseRemainingMs;
     if (phase === "wind-up") {
       phase = "active";
-      phaseRemainingMs = COMBAT_CONFIG.attackActiveMs;
+      phaseRemainingMs = timing.attackActiveMs;
     } else if (phase === "active") {
       phase = "recovery";
-      phaseRemainingMs = COMBAT_CONFIG.attackRecoveryMs;
+      phaseRemainingMs = timing.attackRecoveryMs;
     } else {
       phase = cooldownRemainingMs > 0 ? "cooldown" : "ready";
       phaseRemainingMs = 0;

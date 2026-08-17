@@ -34,9 +34,9 @@ Publish the unchanged Phase 4 game as a root-hosted GitHub Pages site. Add canon
 
 ## Phase 5 — Loot and upgrades
 
-**Status: Deferred**
+**Status: Complete — current release scope**
 
-Add collectible rewards and a concise set of meaningful run upgrades. Define drop rules and upgrade effects with tests while avoiding an oversized inventory system.
+Add three deterministic Treasure Chests, stable enemy reward assignments, Runic Shards, immediate-use Vitality Flasks, one safe-room Runeforge, six deterministic upgrade choices, and a maximum two-upgrade run build costing 6 then 8 shards. Same-seed and new-dungeon resets erase all runtime rewards and upgrades without adding an inventory or persistence.
 
 ## Phase 6 — Complete three-floor run
 

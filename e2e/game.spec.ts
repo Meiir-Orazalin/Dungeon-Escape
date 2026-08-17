@@ -27,6 +27,30 @@ interface EnemySummary {
   readonly state: string;
 }
 
+interface ChestSummary {
+  readonly id: string;
+  readonly roomId: number;
+  readonly position: Position;
+  readonly opened: boolean;
+  readonly shardAmount: number;
+  readonly containsFlask: boolean;
+}
+
+interface PickupSummary {
+  readonly id: string;
+  readonly type: "shard" | "flask";
+  readonly amount: number;
+  readonly position: Position;
+  readonly active: boolean;
+  readonly sourceId: string;
+}
+
+interface EnemyRewardSummary {
+  readonly enemyId: string;
+  readonly shardAmount: number;
+  readonly containsFlask: boolean;
+}
+
 interface E2ESnapshot {
   readonly activeScene: string | null;
   readonly playerPosition: Position | null;
@@ -35,6 +59,7 @@ interface E2ESnapshot {
   readonly layoutFingerprint: string | null;
   readonly objectiveFingerprint: string | null;
   readonly encounterFingerprint: string | null;
+  readonly lootFingerprint: string | null;
   readonly roomCount: number | null;
   readonly spawnRoomId: number | null;
   readonly destinationRoomId: number | null;
@@ -72,6 +97,32 @@ interface E2ESnapshot {
   readonly completionOverlayVisible: boolean | null;
   readonly threatRoomCount: number | null;
   readonly enemies: readonly EnemySummary[];
+  readonly forgeRoomId: number | null;
+  readonly forgePosition: Position | null;
+  readonly forgeState: string | null;
+  readonly availableShardCount: number | null;
+  readonly totalCollectedShardCount: number | null;
+  readonly currentForgeCost: number | null;
+  readonly forgeUpgradesCompleted: number | null;
+  readonly forgeExhausted: boolean | null;
+  readonly upgradeOverlayVisible: boolean | null;
+  readonly currentUpgradeOfferIds: readonly string[];
+  readonly currentUpgradeOfferFingerprint: string | null;
+  readonly selectedUpgradeIds: readonly string[];
+  readonly effectiveMeleeDamage: number | null;
+  readonly effectiveMeleeRange: number | null;
+  readonly effectiveAttackRecovery: number | null;
+  readonly effectiveAttackCooldown: number | null;
+  readonly effectiveDashCooldown: number | null;
+  readonly effectiveMaximumHealth: number | null;
+  readonly effectivePostHitInvulnerability: number | null;
+  readonly totalChestCount: number | null;
+  readonly openedChestCount: number | null;
+  readonly chests: readonly ChestSummary[];
+  readonly pickups: readonly PickupSummary[];
+  readonly flaskConsumptionCount: number | null;
+  readonly enemyRewards: readonly EnemyRewardSummary[];
+  readonly runActivity: "playing" | "choosing-upgrade" | null;
 }
 
 interface TestWindow extends Window {
@@ -80,6 +131,9 @@ interface TestWindow extends Window {
     teleportToTarget: (target: "spawn" | "key" | "gate") => void;
     teleportNearEnemy: (enemyId: string) => void;
     teleportOntoEnemy: (enemyId: string) => void;
+    teleportToChest: (chestId: string) => void;
+    teleportToForge: () => void;
+    teleportToPickup: (pickupId: string) => void;
   };
 }
 
@@ -121,6 +175,111 @@ async function teleportOntoEnemy(page: Page, enemyId: string): Promise<void> {
     if (!bridge) throw new Error("The E2E bridge is unavailable.");
     bridge.teleportOntoEnemy(id);
   }, enemyId);
+}
+
+async function teleportToChest(page: Page, chestId: string): Promise<void> {
+  await page.evaluate((id) => {
+    const bridge = (window as TestWindow).__DUNGEON_ESCAPE_E2E__;
+    if (!bridge) throw new Error("The E2E bridge is unavailable.");
+    bridge.teleportToChest(id);
+  }, chestId);
+}
+
+async function teleportToForge(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const bridge = (window as TestWindow).__DUNGEON_ESCAPE_E2E__;
+    if (!bridge) throw new Error("The E2E bridge is unavailable.");
+    bridge.teleportToForge();
+  });
+}
+
+async function teleportToPickup(page: Page, pickupId: string): Promise<void> {
+  await page.evaluate((id) => {
+    const bridge = (window as TestWindow).__DUNGEON_ESCAPE_E2E__;
+    if (!bridge) throw new Error("The E2E bridge is unavailable.");
+    bridge.teleportToPickup(id);
+  }, pickupId);
+}
+
+async function openChest(page: Page, chestId: string): Promise<void> {
+  await teleportToChest(page, chestId);
+  await expect
+    .poll(async () => (await getSnapshot(page)).interactionPrompt)
+    .toBe("E  ·  OPEN TREASURE CHEST");
+  await page.keyboard.press("e");
+  await expect
+    .poll(
+      async () => (await getSnapshot(page)).chests.find((chest) => chest.id === chestId)?.opened,
+    )
+    .toBe(true);
+}
+
+async function collectPickup(page: Page, pickupId: string): Promise<void> {
+  await teleportToTarget(page, "spawn");
+  await page.waitForTimeout(50);
+  await teleportToPickup(page, pickupId);
+  await expect
+    .poll(async () => (await getSnapshot(page)).pickups.some((pickup) => pickup.id === pickupId))
+    .toBe(false);
+}
+
+async function defeatEnemyWithSword(page: Page, enemyId: string): Promise<void> {
+  let summary = enemyById(await getSnapshot(page), enemyId);
+  while (summary.alive) {
+    const previousHealth = summary.currentHealth;
+    await expect.poll(async () => (await getSnapshot(page)).playerAttackState).toBe("ready");
+    await teleportNearEnemy(page, enemyId);
+    await page.keyboard.press("Space");
+    await expect
+      .poll(async () => enemyById(await getSnapshot(page), enemyId).currentHealth, {
+        timeout: 3_000,
+      })
+      .toBeLessThan(previousHealth);
+    summary = enemyById(await getSnapshot(page), enemyId);
+  }
+}
+
+async function collectAllPlannedShards(page: Page): Promise<E2ESnapshot> {
+  let snapshot = await getSnapshot(page);
+  for (const chest of snapshot.chests) {
+    await openChest(page, chest.id);
+    const shard = (await getSnapshot(page)).pickups.find(
+      (pickup) => pickup.sourceId === chest.id && pickup.type === "shard",
+    );
+    if (!shard) throw new Error(`Chest ${chest.id} did not create its shard pickup.`);
+    await collectPickup(page, shard.id);
+  }
+  snapshot = await getSnapshot(page);
+  for (const enemy of snapshot.enemies) {
+    const beforeShards = (await getSnapshot(page)).availableShardCount ?? 0;
+    const plannedAmount = snapshot.enemyRewards.find(
+      (reward) => reward.enemyId === enemy.id,
+    )?.shardAmount;
+    await defeatEnemyWithSword(page, enemy.id);
+    const shard = (await getSnapshot(page)).pickups.find(
+      (pickup) => pickup.sourceId === enemy.id && pickup.type === "shard",
+    );
+    if (shard) await collectPickup(page, shard.id);
+    else {
+      expect((await getSnapshot(page)).availableShardCount).toBe(
+        beforeShards + (plannedAmount ?? 0),
+      );
+    }
+  }
+  return getSnapshot(page);
+}
+
+async function collectAllChestShards(page: Page): Promise<E2ESnapshot> {
+  const chests = (await getSnapshot(page)).chests;
+  for (const chest of chests) {
+    await openChest(page, chest.id);
+    const shard = (await getSnapshot(page)).pickups.find(
+      (pickup) => pickup.sourceId === chest.id && pickup.type === "shard",
+    );
+    if (!shard) throw new Error(`Chest ${chest.id} did not create its shard pickup.`);
+    await collectPickup(page, shard.id);
+  }
+  return getSnapshot(page);
 }
 
 function enemyById(snapshot: E2ESnapshot, enemyId: string): EnemySummary {
@@ -885,6 +1044,289 @@ test("defeat overlay New Dungeon pointer button creates a fresh complete run", a
   expect(next.playerHealth).toBe(next.playerMaximumHealth);
 });
 
+test("fixed seed reproduces the complete deterministic loot plan and starts empty", async ({
+  page,
+}) => {
+  await openMenu(page, "phase5-loot-plan");
+  await startWithKey(page);
+  const first = await getSnapshot(page);
+  expect(first.lootFingerprint).toMatch(/^lt-[0-9a-f]{8}$/);
+  expect(first.totalChestCount).toBe(3);
+  expect(first.chests).toHaveLength(3);
+  expect(new Set(first.chests.map((chest) => chest.roomId)).size).toBe(3);
+  expect(
+    first.chests.every(
+      (chest) => ![first.spawnRoomId, first.keyRoomId, first.gateRoomId].includes(chest.roomId),
+    ),
+  ).toBe(true);
+  expect(first.forgeRoomId).toBe(first.spawnRoomId);
+  expect(first.availableShardCount).toBe(0);
+  expect(first.totalCollectedShardCount).toBe(0);
+  expect(first.selectedUpgradeIds).toEqual([]);
+  expect(first.openedChestCount).toBe(0);
+  expect(first.pickups).toEqual([]);
+  expect(first.effectiveMeleeDamage).toBe(1);
+  expect(first.effectiveMeleeRange).toBe(58);
+  expect(first.effectiveDashCooldown).toBe(900);
+  expect(first.effectiveMaximumHealth).toBe(5);
+
+  await page.reload();
+  await waitForScene(page, "MenuScene");
+  await startWithKey(page);
+  const second = await getSnapshot(page);
+  expect({
+    layout: second.layoutFingerprint,
+    objective: second.objectiveFingerprint,
+    encounter: second.encounterFingerprint,
+    loot: second.lootFingerprint,
+    forge: second.forgePosition,
+    chests: second.chests,
+    rewards: second.enemyRewards,
+  }).toEqual({
+    layout: first.layoutFingerprint,
+    objective: first.objectiveFingerprint,
+    encounter: first.encounterFingerprint,
+    loot: first.lootFingerprint,
+    forge: first.forgePosition,
+    chests: first.chests,
+    rewards: first.enemyRewards,
+  });
+});
+
+test("real chest interaction creates one reward and real proximity collects its shard", async ({
+  page,
+}) => {
+  await openMenu(page, "phase5-chest-pickup");
+  await startWithKey(page);
+  const chest = (await getSnapshot(page)).chests[0]!;
+  await openChest(page, chest.id);
+  const opened = await getSnapshot(page);
+  const sourcePickups = opened.pickups.filter((pickup) => pickup.sourceId === chest.id);
+  expect(
+    sourcePickups.some((pickup) => pickup.type === "shard" && pickup.amount === chest.shardAmount),
+  ).toBe(true);
+  expect(sourcePickups.some((pickup) => pickup.type === "flask")).toBe(chest.containsFlask);
+  const pickupCount = opened.pickups.length;
+  await page.keyboard.down("e");
+  await page.waitForTimeout(300);
+  await page.keyboard.up("e");
+  expect((await getSnapshot(page)).pickups).toHaveLength(pickupCount);
+  expect((await getSnapshot(page)).interactionPrompt).not.toBe("E  ·  OPEN TREASURE CHEST");
+
+  const shard = sourcePickups.find((pickup) => pickup.type === "shard")!;
+  await collectPickup(page, shard.id);
+  const collected = await getSnapshot(page);
+  expect(collected.availableShardCount).toBe(chest.shardAmount);
+  expect(collected.totalCollectedShardCount).toBe(chest.shardAmount);
+  expect(collected.pickups.some((pickup) => pickup.id === shard.id)).toBe(false);
+});
+
+test("full-health flasks remain, then real damage permits clamped healing", async ({ page }) => {
+  await openMenu(page, "phase5-vitality-flask");
+  await startWithKey(page);
+  const initial = await getSnapshot(page);
+  const flaskChest = initial.chests.find((chest) => chest.containsFlask)!;
+  await openChest(page, flaskChest.id);
+  const flask = (await getSnapshot(page)).pickups.find(
+    (pickup) => pickup.sourceId === flaskChest.id && pickup.type === "flask",
+  )!;
+  await teleportToPickup(page, flask.id);
+  await page.waitForTimeout(350);
+  expect((await getSnapshot(page)).pickups.some((pickup) => pickup.id === flask.id)).toBe(true);
+  expect((await getSnapshot(page)).flaskConsumptionCount).toBe(0);
+
+  const enemy = enemyByArchetype(await getSnapshot(page), "bone-stalker");
+  await teleportOntoEnemy(page, enemy.id);
+  await expect.poll(async () => (await getSnapshot(page)).playerHealth).toBe(4);
+  await teleportToPickup(page, flask.id);
+  await expect.poll(async () => (await getSnapshot(page)).playerHealth).toBe(5);
+  const healed = await getSnapshot(page);
+  expect(healed.flaskConsumptionCount).toBe(1);
+  expect(healed.pickups.some((pickup) => pickup.id === flask.id)).toBe(false);
+});
+
+test("real enemy combat emits its planned reward only once", async ({ page }) => {
+  await openMenu(page, "phase5-enemy-reward");
+  await startWithKey(page);
+  const enemy = enemyByArchetype(await getSnapshot(page), "bone-stalker");
+  const reward = (await getSnapshot(page)).enemyRewards.find(
+    (candidate) => candidate.enemyId === enemy.id,
+  )!;
+  await defeatEnemyWithSword(page, enemy.id);
+  const afterDeath = await getSnapshot(page);
+  const drops = afterDeath.pickups.filter((pickup) => pickup.sourceId === enemy.id);
+  expect(drops.filter((pickup) => pickup.type === "shard")).toHaveLength(1);
+  expect(drops.find((pickup) => pickup.type === "shard")?.amount).toBe(reward.shardAmount);
+  await page.keyboard.press("Space");
+  await page.waitForTimeout(400);
+  const afterRepeatedAttack = (await getSnapshot(page)).pickups.filter(
+    (pickup) => pickup.sourceId === enemy.id,
+  );
+  expect(
+    afterRepeatedAttack.map(({ id, type, amount, sourceId }) => ({ id, type, amount, sourceId })),
+  ).toEqual(drops.map(({ id, type, amount, sourceId }) => ({ id, type, amount, sourceId })));
+});
+
+test("Runeforge inspection, deterministic overlay suspension, Escape, and selection work", async ({
+  page,
+}) => {
+  await openMenu(page, "phase5-forge-flow");
+  await startWithKey(page);
+  await teleportToForge(page);
+  await expect
+    .poll(async () => (await getSnapshot(page)).interactionPrompt)
+    .toBe("E  ·  INSPECT RUNEFORGE");
+  await page.keyboard.press("e");
+  expect((await getSnapshot(page)).upgradeOverlayVisible).toBe(false);
+
+  const funded = await collectAllPlannedShards(page);
+  expect(funded.availableShardCount).toBeGreaterThanOrEqual(14);
+  await teleportToForge(page);
+  await expect
+    .poll(async () => (await getSnapshot(page)).interactionPrompt)
+    .toBe("E  ·  AWAKEN RUNEFORGE");
+  await page.keyboard.press("e");
+  await expect.poll(async () => (await getSnapshot(page)).upgradeOverlayVisible).toBe(true);
+  const choosing = await getSnapshot(page);
+  expect(choosing.currentUpgradeOfferIds).toHaveLength(3);
+  expect(new Set(choosing.currentUpgradeOfferIds).size).toBe(3);
+  expect(choosing.currentUpgradeOfferFingerprint).toMatch(/^uo-[0-9a-f]{8}$/);
+  expect(choosing.runActivity).toBe("choosing-upgrade");
+  const frozenPosition = choosing.playerPosition;
+  const frozenTime = choosing.elapsedTimeMs;
+  const frozenSeed = choosing.seed;
+  await page.keyboard.press("Space");
+  await page.keyboard.press("j");
+  await page.keyboard.press("Shift");
+  await page.keyboard.press("e");
+  await page.keyboard.press("r");
+  await page.keyboard.press("n");
+  await page.keyboard.down("ArrowRight");
+  await page.waitForTimeout(250);
+  await page.keyboard.up("ArrowRight");
+  const frozen = await getSnapshot(page);
+  expect(frozen.playerPosition).toEqual(frozenPosition);
+  expect(frozen.elapsedTimeMs).toBe(frozenTime);
+  expect(frozen.seed).toBe(frozenSeed);
+  expect(frozen.playerAttackState).toBe("ready");
+  expect(frozen.playerDashState).toBe("ready");
+
+  await page.keyboard.press("Escape");
+  await expect.poll(async () => (await getSnapshot(page)).upgradeOverlayVisible).toBe(false);
+  const closed = await getSnapshot(page);
+  expect(closed.availableShardCount).toBe(funded.availableShardCount);
+  expect(closed.selectedUpgradeIds).toEqual([]);
+  await page.keyboard.press("e");
+  await expect.poll(async () => (await getSnapshot(page)).upgradeOverlayVisible).toBe(true);
+  expect((await getSnapshot(page)).currentUpgradeOfferFingerprint).toBe(
+    choosing.currentUpgradeOfferFingerprint,
+  );
+  const selectedId = (await getSnapshot(page)).currentUpgradeOfferIds[0]!;
+  await page.keyboard.press("1");
+  await expect.poll(async () => (await getSnapshot(page)).selectedUpgradeIds).toContain(selectedId);
+  const selected = await getSnapshot(page);
+  expect(selected.availableShardCount).toBe((funded.availableShardCount ?? 0) - 6);
+  expect(selected.currentForgeCost).toBe(8);
+  expect(selected.runActivity).toBe("playing");
+  const effectByUpgrade: Readonly<Record<string, readonly [keyof E2ESnapshot, number]>> = {
+    "tempered-edge": ["effectiveMeleeDamage", 2],
+    "long-reach": ["effectiveMeleeRange", 76],
+    "quickened-steel": ["effectiveAttackCooldown", 260],
+    "fleet-sigil": ["effectiveDashCooldown", 650],
+    "vital-rune": ["effectiveMaximumHealth", 6],
+    "aegis-rune": ["effectivePostHitInvulnerability", 1_150],
+  };
+  const [effectField, effectValue] = effectByUpgrade[selectedId]!;
+  expect(selected[effectField]).toBe(effectValue);
+});
+
+test("two real forge choices exhaust the forge and same-seed R resets all rewards", async ({
+  page,
+}) => {
+  await openMenu(page, "phase5-two-upgrades");
+  await startWithKey(page);
+  const initial = await getSnapshot(page);
+  await collectAllPlannedShards(page);
+  await teleportToForge(page);
+  await page.keyboard.press("e");
+  await expect.poll(async () => (await getSnapshot(page)).upgradeOverlayVisible).toBe(true);
+  await page.keyboard.press("1");
+  await expect.poll(async () => (await getSnapshot(page)).forgeUpgradesCompleted).toBe(1);
+  await teleportToForge(page);
+  await page.keyboard.press("e");
+  await expect.poll(async () => (await getSnapshot(page)).upgradeOverlayVisible).toBe(true);
+  const secondOffer = await getSnapshot(page);
+  expect(secondOffer.currentUpgradeOfferIds).toHaveLength(3);
+  expect(
+    secondOffer.currentUpgradeOfferIds.some((id) => secondOffer.selectedUpgradeIds.includes(id)),
+  ).toBe(false);
+  await clickCanvasPoint(page, 205, 285);
+  await expect.poll(async () => (await getSnapshot(page)).forgeExhausted).toBe(true);
+  const complete = await getSnapshot(page);
+  expect(complete.forgeUpgradesCompleted).toBe(2);
+  expect(complete.currentForgeCost).toBeNull();
+  await teleportToTarget(page, "spawn");
+  expect((await getSnapshot(page)).interactionPrompt).toBeNull();
+
+  await page.keyboard.press("r");
+  await expect.poll(async () => (await getSnapshot(page)).openedChestCount).toBe(0);
+  const replayed = await getSnapshot(page);
+  expect(replayed.lootFingerprint).toBe(initial.lootFingerprint);
+  expect(replayed.chests.map((chest) => ({ ...chest, opened: false }))).toEqual(initial.chests);
+  expect(replayed.availableShardCount).toBe(0);
+  expect(replayed.totalCollectedShardCount).toBe(0);
+  expect(replayed.selectedUpgradeIds).toEqual([]);
+  expect(replayed.pickups).toEqual([]);
+  expect(replayed.effectiveMeleeDamage).toBe(1);
+  expect(replayed.effectiveMaximumHealth).toBe(5);
+  expect(replayed.playerHealth).toBe(5);
+});
+
+test("Tempered Edge changes real melee damage on the documented fixed seed", async ({ page }) => {
+  await openMenu(page, "phase5-upgrade-4");
+  await startWithKey(page);
+  const funded = await collectAllChestShards(page);
+  expect(funded.availableShardCount).toBeGreaterThanOrEqual(6);
+  await teleportToForge(page);
+  await page.keyboard.press("e");
+  await expect.poll(async () => (await getSnapshot(page)).upgradeOverlayVisible).toBe(true);
+  expect((await getSnapshot(page)).currentUpgradeOfferIds).toEqual([
+    "vital-rune",
+    "aegis-rune",
+    "tempered-edge",
+  ]);
+  await page.keyboard.press("3");
+  await expect.poll(async () => (await getSnapshot(page)).effectiveMeleeDamage).toBe(2);
+  const stalker = enemyByArchetype(await getSnapshot(page), "bone-stalker");
+  expect(stalker.maximumHealth).toBe(2);
+  await teleportNearEnemy(page, stalker.id);
+  await page.keyboard.press("Space");
+  await expect.poll(async () => enemyById(await getSnapshot(page), stalker.id).alive).toBe(false);
+});
+
+test("loot remains optional for escape and N creates a fresh loot plan", async ({ page }) => {
+  await openMenu(page, "phase5-optional-escape");
+  await startWithKey(page);
+  const initial = await getSnapshot(page);
+  await completeFloor(page);
+  await waitForCompletionOverlay(page);
+  const completed = await getSnapshot(page);
+  expect(completed.openedChestCount).toBe(0);
+  expect(completed.totalCollectedShardCount).toBe(0);
+  expect(completed.selectedUpgradeIds).toEqual([]);
+  await page.keyboard.press("r");
+  await expect.poll(async () => (await getSnapshot(page)).runOutcome).toBe("active");
+  expect((await getSnapshot(page)).lootFingerprint).toBe(initial.lootFingerprint);
+  await page.keyboard.press("n");
+  await expect
+    .poll(async () => (await getSnapshot(page)).lootFingerprint)
+    .not.toBe(initial.lootFingerprint);
+  const fresh = await getSnapshot(page);
+  expect(fresh.availableShardCount).toBe(0);
+  expect(fresh.selectedUpgradeIds).toEqual([]);
+  expect(fresh.openedChestCount).toBe(0);
+});
+
 test("production assets exclude all E2E bridge and teleport identifiers", async () => {
   const assetsDirectory = join(process.cwd(), "dist", "assets");
   const assetNames = await readdir(assetsDirectory);
@@ -901,4 +1343,7 @@ test("production assets exclude all E2E bridge and teleport identifiers", async 
   expect(productionText).not.toContain("teleportToTarget");
   expect(productionText).not.toContain("teleportNearEnemy");
   expect(productionText).not.toContain("teleportOntoEnemy");
+  expect(productionText).not.toContain("teleportToChest");
+  expect(productionText).not.toContain("teleportToForge");
+  expect(productionText).not.toContain("teleportToPickup");
 });

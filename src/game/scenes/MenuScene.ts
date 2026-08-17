@@ -62,7 +62,7 @@ export class MenuScene extends Phaser.Scene {
       .text(
         GAME_WIDTH / 2,
         225,
-        "Find the Runic Key. Fight or evade the dead. Open the Ancient Gate.",
+        "Loot the catacombs. Forge a run build. Find the key and escape.",
         {
           color: "#8f9b9d",
           fontFamily: "Georgia, Times New Roman, serif",
@@ -109,18 +109,18 @@ export class MenuScene extends Phaser.Scene {
 
     const controls = this.add.container(GAME_WIDTH / 2, 458);
     const controlPlate = this.add
-      .rectangle(0, 0, 780, 76, 0x0b0f11, 0.54)
+      .rectangle(0, 0, 820, 92, 0x0b0f11, 0.54)
       .setStrokeStyle(1, 0x536164, 0.3);
     const controlText = this.add
       .text(
         0,
         0,
-        "WASD / ARROWS  ·  MOVE     SPACE / J / CLICK  ·  ATTACK     SHIFT  ·  DASH\nE  ·  INTERACT     R  ·  RESTART     N  ·  NEW DUNGEON",
+        "ENEMIES + CHESTS  ·  RUNIC SHARDS     FLASKS  ·  RESTORE HEALTH     FORGE  ·  RUN UPGRADES\nWASD / ARROWS  ·  MOVE     SPACE / J / CLICK  ·  ATTACK     SHIFT  ·  DASH\nE  ·  INTERACT     R  ·  RESTART     N  ·  NEW DUNGEON",
         {
           align: "center",
           color: "#a7b0af",
           fontFamily: "Arial, sans-serif",
-          fontSize: "11px",
+          fontSize: "10px",
           fontStyle: "bold",
           letterSpacing: 0.85,
           lineSpacing: 8,

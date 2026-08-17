@@ -3,6 +3,13 @@ import type Phaser from "phaser";
 import { deriveHealthPips, formatDashStatus, formatEnemyCount } from "../combat/hudFormat";
 import type { DashState, PlayerVitality } from "../combat/types";
 import type { DungeonLayout } from "../dungeon/types";
+import {
+  formatChestProgress,
+  formatSelectedUpgradeNames,
+  formatShardProgress,
+  formatUpgradeProgress,
+} from "../loot/hudFormat";
+import type { RunRewardState } from "../loot/rewardState";
 import { formatElapsedTime } from "../objective/timer";
 import type { EscapeObjectiveState } from "../objective/types";
 
@@ -14,15 +21,20 @@ export class DungeonHud {
   private readonly healthGraphics: Phaser.GameObjects.Graphics;
   private readonly enemiesText: Phaser.GameObjects.Text;
   private readonly dashText: Phaser.GameObjects.Text;
+  private readonly shardsText: Phaser.GameObjects.Text;
+  private readonly chestsText: Phaser.GameObjects.Text;
+  private readonly upgradesText: Phaser.GameObjects.Text;
+  private readonly buildText: Phaser.GameObjects.Text;
   private displayedSecond = -1;
-  private displayedHealth = -1;
   private displayedEnemyCount = "";
   private displayedDash = "";
+  private displayedVitality = "";
+  private displayedRewards = "";
 
   public constructor(scene: Phaser.Scene, layout: DungeonLayout, totalEnemies: number) {
     const container = scene.add.container(22, 20).setScrollFactor(0).setDepth(50);
     const plate = scene.add
-      .rectangle(0, 0, 700, 136, 0x080b0d, 0.86)
+      .rectangle(0, 0, 700, 158, 0x080b0d, 0.86)
       .setOrigin(0)
       .setStrokeStyle(1, 0xb88c52, 0.42);
     const title = scene.add.text(16, 11, "THE SHIFTING CATACOMBS", {
@@ -83,9 +95,39 @@ export class DungeonHud {
       fontStyle: "bold",
       letterSpacing: 0.8,
     });
+    this.shardsText = scene.add.text(16, 94, "SHARDS  ·  0 / 6", {
+      color: "#78cfc1",
+      fontFamily: "Arial, sans-serif",
+      fontSize: "9px",
+      fontStyle: "bold",
+      letterSpacing: 0.8,
+    });
+    this.chestsText = scene.add.text(196, 94, "CHESTS  ·  0 / 3", {
+      color: "#c3a168",
+      fontFamily: "Arial, sans-serif",
+      fontSize: "9px",
+      fontStyle: "bold",
+      letterSpacing: 0.8,
+    });
+    this.upgradesText = scene.add.text(398, 94, "RUNES  ·  0 / 2", {
+      color: "#ba94c8",
+      fontFamily: "Arial, sans-serif",
+      fontSize: "9px",
+      fontStyle: "bold",
+      letterSpacing: 0.8,
+    });
+    this.buildText = scene.add
+      .text(682, 94, "BUILD  ·  NONE", {
+        color: "#8e9a9b",
+        fontFamily: "Arial, sans-serif",
+        fontSize: "8px",
+        fontStyle: "bold",
+        letterSpacing: 0.5,
+      })
+      .setOrigin(1, 0);
     const combatControls = scene.add.text(
       16,
-      94,
+      116,
       "SPACE / J / CLICK  ·  ATTACK     SHIFT  ·  DASH     E  ·  INTERACT",
       {
         color: "#778587",
@@ -94,14 +136,14 @@ export class DungeonHud {
         letterSpacing: 0.72,
       },
     );
-    const floorControls = scene.add.text(16, 116, "R  ·  RESTART     N  ·  NEW", {
+    const floorControls = scene.add.text(16, 138, "R  ·  RESTART     N  ·  NEW", {
       color: "#6f7c7e",
       fontFamily: "Arial, sans-serif",
       fontSize: "9px",
       letterSpacing: 0.9,
     });
     this.discoveredText = scene.add
-      .text(682, 116, `1 / ${layout.rooms.length} ROOMS`, {
+      .text(682, 138, `1 / ${layout.rooms.length} ROOMS`, {
         color: "#a88a5e",
         fontFamily: "Arial, sans-serif",
         fontSize: "9px",
@@ -120,6 +162,10 @@ export class DungeonHud {
       this.healthGraphics,
       this.enemiesText,
       this.dashText,
+      this.shardsText,
+      this.chestsText,
+      this.upgradesText,
+      this.buildText,
       combatControls,
       floorControls,
       this.discoveredText,
@@ -158,8 +204,9 @@ export class DungeonHud {
   }
 
   public updateHealth(vitality: PlayerVitality): void {
-    if (vitality.health === this.displayedHealth) return;
-    this.displayedHealth = vitality.health;
+    const vitalityKey = `${vitality.health}/${vitality.maximumHealth}`;
+    if (vitalityKey === this.displayedVitality) return;
+    this.displayedVitality = vitalityKey;
     const pips = deriveHealthPips(vitality.health, vitality.maximumHealth);
     this.healthGraphics.clear();
     for (let index = 0; index < pips.full + pips.empty; index += 1) {
@@ -169,6 +216,28 @@ export class DungeonHud {
       this.healthGraphics.lineStyle(1, full ? 0xf09b83 : 0x596365, 0.8);
       this.healthGraphics.strokeRoundedRect(75 + index * 19, 70, 14, 10, 2);
     }
+  }
+
+  public updateRewards(state: RunRewardState, totalChests: number): void {
+    const rewardKey = [
+      state.availableShards,
+      state.openedChestIds.size,
+      state.selectedUpgradeIds.join(","),
+      state.forge.status,
+      state.forge.cost,
+    ].join("|");
+    if (rewardKey === this.displayedRewards) return;
+    this.displayedRewards = rewardKey;
+    this.shardsText.setText(
+      `SHARDS  ·  ${formatShardProgress(state.availableShards, state.forge)}`,
+    );
+    this.chestsText.setText(
+      `CHESTS  ·  ${formatChestProgress(state.openedChestIds.size, totalChests)}`,
+    );
+    this.upgradesText.setText(
+      `RUNES  ·  ${formatUpgradeProgress(state.selectedUpgradeIds.length)}`,
+    );
+    this.buildText.setText(`BUILD  ·  ${formatSelectedUpgradeNames(state.selectedUpgradeIds)}`);
   }
 
   public updateEnemies(defeated: number, total: number): void {

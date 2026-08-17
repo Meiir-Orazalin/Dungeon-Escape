@@ -3,6 +3,7 @@ import Phaser from "phaser";
 import { SCENE_KEYS } from "../constants";
 import { ENCOUNTER_GAME_OBJECT_NAMES } from "../encounters/config";
 import { Player } from "../entities/Player";
+import { LOOT_GAME_OBJECT_NAMES } from "../loot/config";
 import { GAME_OBJECT_NAMES } from "../objective/config";
 import { GameScene, type GameSceneSnapshot } from "../scenes/GameScene";
 
@@ -14,6 +15,7 @@ export interface E2ESnapshot {
   readonly layoutFingerprint: string | null;
   readonly objectiveFingerprint: string | null;
   readonly encounterFingerprint: string | null;
+  readonly lootFingerprint: string | null;
   readonly roomCount: number | null;
   readonly spawnRoomId: number | null;
   readonly destinationRoomId: number | null;
@@ -51,6 +53,32 @@ export interface E2ESnapshot {
   readonly completionOverlayVisible: boolean | null;
   readonly threatRoomCount: number | null;
   readonly enemies: GameSceneSnapshot["enemies"];
+  readonly forgeRoomId: number | null;
+  readonly forgePosition: GameSceneSnapshot["forgePosition"] | null;
+  readonly forgeState: string | null;
+  readonly availableShardCount: number | null;
+  readonly totalCollectedShardCount: number | null;
+  readonly currentForgeCost: number | null;
+  readonly forgeUpgradesCompleted: number | null;
+  readonly forgeExhausted: boolean | null;
+  readonly upgradeOverlayVisible: boolean | null;
+  readonly currentUpgradeOfferIds: GameSceneSnapshot["currentUpgradeOfferIds"];
+  readonly currentUpgradeOfferFingerprint: string | null;
+  readonly selectedUpgradeIds: GameSceneSnapshot["selectedUpgradeIds"];
+  readonly effectiveMeleeDamage: number | null;
+  readonly effectiveMeleeRange: number | null;
+  readonly effectiveAttackRecovery: number | null;
+  readonly effectiveAttackCooldown: number | null;
+  readonly effectiveDashCooldown: number | null;
+  readonly effectiveMaximumHealth: number | null;
+  readonly effectivePostHitInvulnerability: number | null;
+  readonly totalChestCount: number | null;
+  readonly openedChestCount: number | null;
+  readonly chests: GameSceneSnapshot["chests"];
+  readonly pickups: GameSceneSnapshot["pickups"];
+  readonly flaskConsumptionCount: number | null;
+  readonly enemyRewards: GameSceneSnapshot["enemyRewards"];
+  readonly runActivity: GameSceneSnapshot["runActivity"] | null;
 }
 
 export interface DungeonEscapeE2EBridge {
@@ -58,6 +86,9 @@ export interface DungeonEscapeE2EBridge {
   teleportToTarget: (target: "spawn" | "key" | "gate") => void;
   teleportNearEnemy: (enemyId: string) => void;
   teleportOntoEnemy: (enemyId: string) => void;
+  teleportToChest: (chestId: string) => void;
+  teleportToForge: () => void;
+  teleportToPickup: (pickupId: string) => void;
 }
 
 interface E2EWindow extends Window {
@@ -81,6 +112,7 @@ export function installE2EBridge(game: Phaser.Game): void {
         layoutFingerprint: gameSnapshot?.layoutFingerprint ?? null,
         objectiveFingerprint: gameSnapshot?.objectiveFingerprint ?? null,
         encounterFingerprint: gameSnapshot?.encounterFingerprint ?? null,
+        lootFingerprint: gameSnapshot?.lootFingerprint ?? null,
         roomCount: gameSnapshot?.roomCount ?? null,
         spawnRoomId: gameSnapshot?.spawnRoomId ?? null,
         destinationRoomId: gameSnapshot?.destinationRoomId ?? null,
@@ -118,6 +150,32 @@ export function installE2EBridge(game: Phaser.Game): void {
         completionOverlayVisible: gameSnapshot?.completionOverlayVisible ?? null,
         threatRoomCount: gameSnapshot?.threatRoomCount ?? null,
         enemies: gameSnapshot?.enemies ?? [],
+        forgeRoomId: gameSnapshot?.forgeRoomId ?? null,
+        forgePosition: gameSnapshot?.forgePosition ?? null,
+        forgeState: gameSnapshot?.forgeState ?? null,
+        availableShardCount: gameSnapshot?.availableShardCount ?? null,
+        totalCollectedShardCount: gameSnapshot?.totalCollectedShardCount ?? null,
+        currentForgeCost: gameSnapshot?.currentForgeCost ?? null,
+        forgeUpgradesCompleted: gameSnapshot?.forgeUpgradesCompleted ?? null,
+        forgeExhausted: gameSnapshot?.forgeExhausted ?? null,
+        upgradeOverlayVisible: gameSnapshot?.upgradeOverlayVisible ?? null,
+        currentUpgradeOfferIds: gameSnapshot?.currentUpgradeOfferIds ?? [],
+        currentUpgradeOfferFingerprint: gameSnapshot?.currentUpgradeOfferFingerprint ?? null,
+        selectedUpgradeIds: gameSnapshot?.selectedUpgradeIds ?? [],
+        effectiveMeleeDamage: gameSnapshot?.effectiveMeleeDamage ?? null,
+        effectiveMeleeRange: gameSnapshot?.effectiveMeleeRange ?? null,
+        effectiveAttackRecovery: gameSnapshot?.effectiveAttackRecovery ?? null,
+        effectiveAttackCooldown: gameSnapshot?.effectiveAttackCooldown ?? null,
+        effectiveDashCooldown: gameSnapshot?.effectiveDashCooldown ?? null,
+        effectiveMaximumHealth: gameSnapshot?.effectiveMaximumHealth ?? null,
+        effectivePostHitInvulnerability: gameSnapshot?.effectivePostHitInvulnerability ?? null,
+        totalChestCount: gameSnapshot?.totalChestCount ?? null,
+        openedChestCount: gameSnapshot?.openedChestCount ?? null,
+        chests: gameSnapshot?.chests ?? [],
+        pickups: gameSnapshot?.pickups ?? [],
+        flaskConsumptionCount: gameSnapshot?.flaskConsumptionCount ?? null,
+        enemyRewards: gameSnapshot?.enemyRewards ?? [],
+        runActivity: gameSnapshot?.runActivity ?? null,
       };
     },
     teleportToTarget: (target): void => {
@@ -163,7 +221,65 @@ export function installE2EBridge(game: Phaser.Game): void {
     teleportOntoEnemy: (enemyId): void => {
       teleportRelativeToEnemy(game, enemyId, 0);
     },
+    teleportToChest: (chestId): void => {
+      const scene = requireActiveGameScene(game);
+      const snapshot = scene.getTestSnapshot();
+      const chest = snapshot?.chests.find((candidate) => candidate.id === chestId);
+      if (!snapshot || snapshot.runOutcome !== "active" || !chest || chest.opened) {
+        throw new Error(`Cannot teleport because closed chest ${chestId} is unavailable.`);
+      }
+      teleportPlayerToNamedContainer(
+        scene,
+        `${LOOT_GAME_OBJECT_NAMES.CHEST_PREFIX}${chestId}`,
+        "Treasure Chest",
+      );
+    },
+    teleportToForge: (): void => {
+      const scene = requireActiveGameScene(game);
+      const snapshot = scene.getTestSnapshot();
+      if (!snapshot || snapshot.runOutcome !== "active" || snapshot.forgeExhausted) {
+        throw new Error("Cannot teleport because the active Runeforge is unavailable.");
+      }
+      teleportPlayerToNamedContainer(scene, LOOT_GAME_OBJECT_NAMES.FORGE, "Runeforge");
+    },
+    teleportToPickup: (pickupId): void => {
+      const scene = requireActiveGameScene(game);
+      const snapshot = scene.getTestSnapshot();
+      const pickup = snapshot?.pickups.find((candidate) => candidate.id === pickupId);
+      if (!snapshot || snapshot.runOutcome !== "active" || !pickup?.active) {
+        throw new Error(`Cannot teleport because active pickup ${pickupId} is unavailable.`);
+      }
+      teleportPlayerToNamedContainer(
+        scene,
+        `${LOOT_GAME_OBJECT_NAMES.PICKUP_PREFIX}${pickupId}`,
+        "loot pickup",
+      );
+    },
   };
+}
+
+function requireActiveGameScene(game: Phaser.Game): GameScene {
+  if (!game.scene.isActive(SCENE_KEYS.GAME)) {
+    throw new Error("Cannot teleport without an active GameScene.");
+  }
+  const scene = game.scene.getScene(SCENE_KEYS.GAME);
+  if (!(scene instanceof GameScene)) throw new Error("Active GameScene is unavailable.");
+  return scene;
+}
+
+function teleportPlayerToNamedContainer(scene: GameScene, objectName: string, label: string): void {
+  const snapshot = scene.getTestSnapshot();
+  if (!snapshot || snapshot.runActivity !== "playing") {
+    throw new Error(`Cannot teleport to ${label} unless the active run is playing.`);
+  }
+  const player = scene.children.getByName(GAME_OBJECT_NAMES.PLAYER);
+  const target = scene.children.getByName(objectName);
+  if (!(player instanceof Player) || !(target instanceof Phaser.GameObjects.Container)) {
+    throw new Error(`Cannot teleport because ${label} or the player is unavailable.`);
+  }
+  const body = player.body as Phaser.Physics.Arcade.Body;
+  body.reset(target.x, target.y);
+  player.setVelocity(0, 0);
 }
 
 function teleportRelativeToEnemy(game: Phaser.Game, enemyId: string, distance: number): void {

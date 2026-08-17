@@ -15,8 +15,8 @@ export function isTargetInsideMeleeSector(
   facing: Vector2,
   target: Vector2,
   targetRadius: number,
-  range = COMBAT_CONFIG.attackRange,
-  fullArcDegrees = COMBAT_CONFIG.attackArcDegrees,
+  range: number = COMBAT_CONFIG.attackRange,
+  fullArcDegrees: number = COMBAT_CONFIG.attackArcDegrees,
 ): boolean {
   if (
     ![origin.x, origin.y, target.x, target.y, targetRadius, range, fullArcDegrees].every(
@@ -66,6 +66,7 @@ export function selectMeleeHits(
   facing: Vector2,
   targets: readonly MeleeTarget[],
   alreadyHit: ReadonlySet<string>,
+  range: number = COMBAT_CONFIG.attackRange,
 ): readonly string[] {
   return Object.freeze(
     targets
@@ -73,7 +74,7 @@ export function selectMeleeHits(
         (target) =>
           target.alive &&
           !alreadyHit.has(target.id) &&
-          isTargetInsideMeleeSector(origin, facing, target.position, target.radius) &&
+          isTargetInsideMeleeSector(origin, facing, target.position, target.radius, range) &&
           hasWalkableAttackLine(layout, origin, target.position),
       )
       .map((target) => target.id)

@@ -53,7 +53,14 @@ interface EnemyRuntime {
 
 interface EnemyManagerCallbacks {
   readonly damagePlayer: (source: Vector2) => void;
-  readonly enemyDefeated: (enemyId: string) => void;
+  readonly enemyDefeated: (
+    details: Readonly<{
+      enemyId: string;
+      archetype: EnemySpawnPlan["archetype"];
+      roomId: number;
+      position: Vector2;
+    }>,
+  ) => void;
 }
 
 function textureFor(archetype: EnemySpawnPlan["archetype"]): string {
@@ -129,6 +136,8 @@ export class EnemyManager {
     origin: Vector2,
     facing: Vector2,
     alreadyHit: ReadonlySet<string>,
+    damage: number = COMBAT_CONFIG.attackDamage,
+    range: number = COMBAT_CONFIG.attackRange,
   ): readonly string[] {
     if (!this.active) return [];
     const targets = [...this.enemies.values()].map((enemy) => ({
@@ -137,8 +146,8 @@ export class EnemyManager {
       radius: ENEMY_ARCHETYPE_CONFIG[enemy.plan.archetype].bodyRadius,
       alive: enemy.health > 0 && enemy.sprite.active,
     }));
-    const hits = selectMeleeHits(this.layout, origin, facing, targets, alreadyHit);
-    hits.forEach((id) => this.damageEnemy(id, origin));
+    const hits = selectMeleeHits(this.layout, origin, facing, targets, alreadyHit, range);
+    hits.forEach((id) => this.damageEnemy(id, origin, damage));
     return hits;
   }
 
@@ -187,6 +196,19 @@ export class EnemyManager {
       enemy.telegraph.setVisible(false);
     });
     this.destroyAllProjectiles();
+  }
+
+  public pause(): void {
+    this.active = false;
+    this.enemies.forEach((enemy) => {
+      enemy.sprite.setVelocity(0, 0);
+      enemy.telegraph.setVisible(false);
+    });
+    this.destroyAllProjectiles();
+  }
+
+  public resume(): void {
+    this.active = true;
   }
 
   public destroy(): void {
@@ -326,10 +348,10 @@ export class EnemyManager {
     }
   }
 
-  private damageEnemy(id: string, source: Vector2): void {
+  private damageEnemy(id: string, source: Vector2, damage: number): void {
     const enemy = this.enemies.get(id);
     if (!enemy || enemy.health === 0) return;
-    enemy.health = Math.max(0, enemy.health - COMBAT_CONFIG.attackDamage);
+    enemy.health = Math.max(0, enemy.health - Math.max(1, Math.floor(damage)));
     enemy.sprite.setTint(0xffe1b1);
     this.scene.time.delayedCall(90, () => {
       if (enemy.sprite.active) enemy.sprite.clearTint();
@@ -367,7 +389,14 @@ export class EnemyManager {
     enemy.shadow.setVisible(false);
     enemy.telegraph.setVisible(false);
     this.destroyOwnerProjectiles(enemy.plan.id);
-    this.callbacks.enemyDefeated(enemy.plan.id);
+    this.callbacks.enemyDefeated(
+      Object.freeze({
+        enemyId: enemy.plan.id,
+        archetype: enemy.plan.archetype,
+        roomId: enemy.plan.roomId,
+        position: Object.freeze({ x: enemy.sprite.x, y: enemy.sprite.y }),
+      }),
+    );
   }
 
   private fireProjectile(enemy: EnemyRuntime, direction: Vector2): void {

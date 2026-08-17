@@ -1,6 +1,6 @@
 {
   "name": "dungeon-escape",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
   "description": "A deterministic dark fantasy dungeon combat and escape game built with Phaser and TypeScript.",

@@ -25,19 +25,23 @@ import { AncientGate } from "../entities/AncientGate";
 import { Player } from "../entities/Player";
 import { RunicKey } from "../entities/RunicKey";
 import type { MovementInput } from "../input/movement";
+import {
+  selectGameplayInteractionTarget,
+  type GameplayInteractionCandidate,
+} from "../interaction/selection";
+import { createLootPlan } from "../loot/createLootPlan";
+import { LootManager } from "../loot/runtime/LootManager";
+import type { RunRewardState } from "../loot/rewardState";
+import { createInitialRewardState } from "../loot/rewardState";
+import type { LootPlan } from "../loot/types";
 import { OBJECTIVE_CONFIG } from "../objective/config";
 import { createEscapeObjective } from "../objective/createEscapeObjective";
-import { selectInteractionTarget } from "../objective/interaction";
 import {
   createInitialObjectiveState,
   objectiveHasKey,
   reduceObjectiveState,
 } from "../objective/objectiveState";
-import type {
-  EscapeObjectivePlan,
-  EscapeObjectiveState,
-  ObjectiveTargetId,
-} from "../objective/types";
+import type { EscapeObjectivePlan, EscapeObjectiveState } from "../objective/types";
 import { DungeonRenderer } from "../rendering/DungeonRenderer";
 import { announceGameState } from "../ui/announce";
 import { DungeonHud } from "../ui/DungeonHud";
@@ -46,6 +50,11 @@ import { FloorCompleteOverlay } from "../ui/FloorCompleteOverlay";
 import { InteractionPrompt } from "../ui/InteractionPrompt";
 import { ObjectiveToast } from "../ui/ObjectiveToast";
 import { PlayerDefeatedOverlay } from "../ui/PlayerDefeatedOverlay";
+import { UpgradeChoiceOverlay } from "../ui/UpgradeChoiceOverlay";
+import { transitionActiveRunActivity, type ActiveRunActivity } from "../upgrades/activityState";
+import { getUpgrade } from "../upgrades/catalog";
+import { deriveEffectivePlayerStats } from "../upgrades/effectiveStats";
+import type { UpgradeId } from "../upgrades/types";
 
 interface MovementKeys {
   readonly up: Phaser.Input.Keyboard.Key;
@@ -66,6 +75,7 @@ export interface GameSceneSnapshot {
   readonly layoutFingerprint: string;
   readonly objectiveFingerprint: string;
   readonly encounterFingerprint: string;
+  readonly lootFingerprint: string;
   readonly roomCount: number;
   readonly spawnRoomId: number;
   readonly destinationRoomId: number;
@@ -103,19 +113,48 @@ export interface GameSceneSnapshot {
   readonly completionOverlayVisible: boolean;
   readonly threatRoomCount: number;
   readonly enemies: readonly EnemySummary[];
+  readonly forgeRoomId: number;
+  readonly forgePosition: { readonly x: number; readonly y: number };
+  readonly forgeState: string;
+  readonly availableShardCount: number;
+  readonly totalCollectedShardCount: number;
+  readonly currentForgeCost: number | null;
+  readonly forgeUpgradesCompleted: number;
+  readonly forgeExhausted: boolean;
+  readonly upgradeOverlayVisible: boolean;
+  readonly currentUpgradeOfferIds: readonly UpgradeId[];
+  readonly currentUpgradeOfferFingerprint: string | null;
+  readonly selectedUpgradeIds: readonly UpgradeId[];
+  readonly effectiveMeleeDamage: number;
+  readonly effectiveMeleeRange: number;
+  readonly effectiveAttackRecovery: number;
+  readonly effectiveAttackCooldown: number;
+  readonly effectiveDashCooldown: number;
+  readonly effectiveMaximumHealth: number;
+  readonly effectivePostHitInvulnerability: number;
+  readonly totalChestCount: number;
+  readonly openedChestCount: number;
+  readonly chests: ReturnType<LootManager["getChestSummaries"]>;
+  readonly pickups: ReturnType<LootManager["getPickupSummaries"]>;
+  readonly flaskConsumptionCount: number;
+  readonly enemyRewards: LootPlan["enemyRewards"];
+  readonly runActivity: ActiveRunActivity;
 }
 
 export class GameScene extends Phaser.Scene {
   private layout?: DungeonLayout;
   private objectivePlan?: EscapeObjectivePlan;
   private encounterPlan?: EncounterPlan;
+  private lootPlan?: LootPlan;
   private objectiveState: EscapeObjectiveState = createInitialObjectiveState();
   private runOutcome: RunOutcome = "active";
+  private runActivity: ActiveRunActivity = "playing";
   private player?: Player;
   private runicKey?: RunicKey;
   private ancientGate?: AncientGate;
   private enemies?: EnemyManager;
   private combat?: CombatController;
+  private loot?: LootManager;
   private cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd?: MovementKeys;
   private interactionKey?: Phaser.Input.Keyboard.Key;
@@ -131,6 +170,7 @@ export class GameScene extends Phaser.Scene {
   private objectiveToast?: ObjectiveToast;
   private completionOverlay?: FloorCompleteOverlay;
   private defeatOverlay?: PlayerDefeatedOverlay;
+  private upgradeOverlay?: UpgradeChoiceOverlay;
   private lastPlayerTileIndex = -1;
   private elapsedTimeMs = 0;
   private isTransitioning = false;
@@ -153,6 +193,7 @@ export class GameScene extends Phaser.Scene {
       this.layout = generateDungeon(requestedSeed);
       this.objectivePlan = createEscapeObjective(this.layout);
       this.encounterPlan = createEncounterPlan(this.layout, this.objectivePlan);
+      this.lootPlan = createLootPlan(this.layout, this.objectivePlan, this.encounterPlan);
     } catch {
       announceGameState(
         "Dungeon encounter planning failed safely. Return to the menu and try a new seed.",
@@ -180,12 +221,38 @@ export class GameScene extends Phaser.Scene {
       renderer.collisionGroup,
       {
         damagePlayer: (source) => this.handlePlayerDamage(source),
-        enemyDefeated: () => this.handleEnemyDefeated(),
+        enemyDefeated: (details) => this.handleEnemyDefeated(details),
       },
     );
     this.combat = new CombatController(this, this.player, this.enemies, {
       healthChanged: (vitality) => this.hud?.updateHealth(vitality),
       playerDefeated: () => this.defeatRun(),
+    });
+    this.loot = new LootManager(this, this.layout, this.lootPlan, {
+      stateChanged: (state, becameReady) => this.handleRewardStateChanged(state, becameReady),
+      chestOpened: () => {
+        this.objectiveToast?.show("TREASURE CHEST OPENED", "Its runes spill onto the floor.");
+        announceGameState("Treasure Chest opened.");
+      },
+      healPlayer: (amount) =>
+        this.combat?.heal(amount) ?? {
+          consumed: false,
+          restoredHealth: 0,
+          vitality: this.combat?.getVitality() ?? {
+            status: "defeated",
+            health: 0,
+            maximumHealth: 5,
+          },
+        },
+      healed: (vitality, restoredHealth) => {
+        this.objectiveToast?.show(
+          "VITALITY RESTORED",
+          `${restoredHealth} health restored. ${vitality.health} / ${vitality.maximumHealth}`,
+        );
+        announceGameState(
+          `Vitality Flask restored ${restoredHealth} health. ${vitality.health} health remaining.`,
+        );
+      },
     });
 
     this.hud = new DungeonHud(this, this.layout, this.encounterPlan.enemies.length);
@@ -194,8 +261,20 @@ export class GameScene extends Phaser.Scene {
     this.hud.updateHealth(this.combat.getVitality());
     this.hud.updateEnemies(0, this.encounterPlan.enemies.length);
     this.hud.updateDash(this.combat.getDashState());
-    this.minimap = new DungeonMinimap(this, this.layout, this.objectivePlan, this.encounterPlan);
-    this.minimap.update(this.discovery, this.objectiveState, this.enemies.getAliveEnemyIds());
+    this.hud.updateRewards(this.loot.getState(), this.lootPlan.chests.length);
+    this.minimap = new DungeonMinimap(
+      this,
+      this.layout,
+      this.objectivePlan,
+      this.encounterPlan,
+      this.lootPlan,
+    );
+    this.minimap.update(
+      this.discovery,
+      this.objectiveState,
+      this.enemies.getAliveEnemyIds(),
+      this.loot.getState(),
+    );
     this.interactionPrompt = new InteractionPrompt(this);
     this.objectiveToast = new ObjectiveToast(this);
 
@@ -217,11 +296,12 @@ export class GameScene extends Phaser.Scene {
       !this.layout ||
       !this.discovery ||
       !this.combat ||
-      !this.enemies
+      !this.enemies ||
+      !this.loot
     ) {
       return;
     }
-    if (this.runOutcome !== "active" || this.isTransitioning) {
+    if (this.runOutcome !== "active" || this.runActivity !== "playing" || this.isTransitioning) {
       this.player.stopMovement();
       return;
     }
@@ -233,6 +313,7 @@ export class GameScene extends Phaser.Scene {
     this.hud?.updateDash(this.combat.getDashState());
     this.updateDiscovery();
     this.enemies.update(delta, this.discovery);
+    this.loot.update(this.player);
     this.updateInteractionPrompt();
   }
 
@@ -242,9 +323,11 @@ export class GameScene extends Phaser.Scene {
       !this.layout ||
       !this.objectivePlan ||
       !this.encounterPlan ||
+      !this.lootPlan ||
       !this.discovery ||
       !this.enemies ||
-      !this.combat
+      !this.combat ||
+      !this.loot
     ) {
       return null;
     }
@@ -257,6 +340,9 @@ export class GameScene extends Phaser.Scene {
     const attack = this.combat.getAttackState();
     const dash = this.combat.getDashState();
     const aliveEnemyIds = this.enemies.getAliveEnemyIds();
+    const rewardState = this.loot.getState();
+    const effectiveStats = this.combat.getEffectiveStats();
+    const activeOffer = rewardState.forge.status === "choosing" ? rewardState.forge.offer : null;
 
     return {
       playerPosition: { x: this.player.x, y: this.player.y },
@@ -265,6 +351,7 @@ export class GameScene extends Phaser.Scene {
       layoutFingerprint: this.layout.fingerprint,
       objectiveFingerprint: this.objectivePlan.fingerprint,
       encounterFingerprint: this.encounterPlan.fingerprint,
+      lootFingerprint: this.lootPlan.fingerprint,
       roomCount: this.layout.rooms.length,
       spawnRoomId: this.layout.spawnRoomId,
       destinationRoomId: this.layout.destinationRoomId,
@@ -281,7 +368,8 @@ export class GameScene extends Phaser.Scene {
       keyObjectActive: this.runicKey?.active === true && this.runicKey.visible,
       gateReady: this.ancientGate?.isReady() === true,
       floorComplete: this.runOutcome === "escaped",
-      movementEnabled: this.runOutcome === "active" && !this.isTransitioning,
+      movementEnabled:
+        this.runOutcome === "active" && this.runActivity === "playing" && !this.isTransitioning,
       interactionPrompt: this.interactionPrompt?.getText() ?? null,
       elapsedTimeMs: completedTime,
       totalEnemyCount: this.enemies.getTotalCount(),
@@ -303,12 +391,39 @@ export class GameScene extends Phaser.Scene {
       threatRoomCount: deriveThreatRoomIds(this.discovery, this.encounterPlan, aliveEnemyIds)
         .length,
       enemies: this.enemies.getSummaries(),
+      forgeRoomId: this.lootPlan.forge.roomId,
+      forgePosition: { x: this.lootPlan.forge.position.x, y: this.lootPlan.forge.position.y },
+      forgeState: rewardState.forge.status,
+      availableShardCount: rewardState.availableShards,
+      totalCollectedShardCount: rewardState.totalCollectedShards,
+      currentForgeCost: rewardState.forge.cost,
+      forgeUpgradesCompleted: rewardState.selectedUpgradeIds.length,
+      forgeExhausted: rewardState.forge.status === "exhausted",
+      upgradeOverlayVisible: this.upgradeOverlay !== undefined,
+      currentUpgradeOfferIds: activeOffer?.upgradeIds ?? [],
+      currentUpgradeOfferFingerprint: activeOffer?.fingerprint ?? null,
+      selectedUpgradeIds: rewardState.selectedUpgradeIds,
+      effectiveMeleeDamage: effectiveStats.meleeDamage,
+      effectiveMeleeRange: effectiveStats.meleeRange,
+      effectiveAttackRecovery: effectiveStats.attackRecoveryMs,
+      effectiveAttackCooldown: effectiveStats.attackCooldownMs,
+      effectiveDashCooldown: effectiveStats.dashCooldownMs,
+      effectiveMaximumHealth: effectiveStats.maximumHealth,
+      effectivePostHitInvulnerability: effectiveStats.postHitInvulnerabilityMs,
+      totalChestCount: this.lootPlan.chests.length,
+      openedChestCount: rewardState.openedChestIds.size,
+      chests: this.loot.getChestSummaries(),
+      pickups: this.loot.getPickupSummaries(),
+      flaskConsumptionCount: rewardState.flasksConsumed,
+      enemyRewards: this.lootPlan.enemyRewards,
+      runActivity: this.runActivity,
     };
   }
 
   private resetRuntimeState(): void {
     this.objectiveState = createInitialObjectiveState();
     this.runOutcome = "active";
+    this.runActivity = "playing";
     this.elapsedTimeMs = 0;
     this.lastPlayerTileIndex = -1;
     this.isTransitioning = false;
@@ -318,6 +433,7 @@ export class GameScene extends Phaser.Scene {
     this.isDashHeld = false;
     this.completionOverlay = undefined;
     this.defeatOverlay = undefined;
+    this.upgradeOverlay = undefined;
   }
 
   private configureCamera(): void {
@@ -394,7 +510,7 @@ export class GameScene extends Phaser.Scene {
   private handleDashDown(): void {
     if (this.isDashHeld) return;
     this.isDashHeld = true;
-    if (this.runOutcome === "active" && !this.isTransitioning) {
+    if (this.runOutcome === "active" && this.runActivity === "playing" && !this.isTransitioning) {
       this.combat?.beginDash(this.readMovementInput());
     }
   }
@@ -404,23 +520,30 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handlePointerAttack(pointer: Phaser.Input.Pointer): void {
-    if (pointer.button !== 0 || this.runOutcome !== "active" || this.isTransitioning) return;
+    if (
+      pointer.button !== 0 ||
+      this.runOutcome !== "active" ||
+      this.runActivity !== "playing" ||
+      this.isTransitioning
+    )
+      return;
     const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
     this.combat?.beginPointerAttack(worldPoint);
   }
 
   private handleActiveRestart(): void {
-    if (this.runOutcome !== "active") return;
+    if (this.runOutcome !== "active" || this.runActivity !== "playing") return;
     this.restartFloor();
   }
 
   private handleActiveNewDungeon(): void {
-    if (this.runOutcome !== "active") return;
+    if (this.runOutcome !== "active" || this.runActivity !== "playing") return;
     this.generateNewDungeon();
   }
 
   private attack(): void {
-    if (this.runOutcome !== "active" || this.isTransitioning) return;
+    if (this.runOutcome !== "active" || this.runActivity !== "playing" || this.isTransitioning)
+      return;
     this.combat?.beginFacingAttack();
   }
 
@@ -428,29 +551,42 @@ export class GameScene extends Phaser.Scene {
     if (
       !this.player ||
       this.runOutcome !== "active" ||
+      this.runActivity !== "playing" ||
       this.isTransitioning ||
       this.combat?.canInteract() !== true
     ) {
       return;
     }
     const target = this.currentInteractionTarget();
-    if (target === "key") this.collectKey();
-    if (target === "gate") this.attemptGate();
+    if (target?.type === "key") this.collectKey();
+    if (target?.type === "gate") this.attemptGate();
+    if (target?.type === "chest") this.loot?.openChest(target.id);
+    if (target?.type === "forge") this.interactWithForge();
   }
 
-  private currentInteractionTarget(): ObjectiveTargetId | null {
-    if (!this.player || !this.objectivePlan || this.runOutcome !== "active") return null;
-    return selectInteractionTarget(this.player, [
+  private currentInteractionTarget(): GameplayInteractionCandidate | null {
+    if (
+      !this.player ||
+      !this.objectivePlan ||
+      !this.loot ||
+      this.runOutcome !== "active" ||
+      this.runActivity !== "playing"
+    )
+      return null;
+    return selectGameplayInteractionTarget(this.player, [
       {
         id: "key",
+        type: "key",
         position: this.objectivePlan.keyPosition,
         available: this.objectiveState.status === "seeking-key" && this.runicKey?.active === true,
       },
       {
         id: "gate",
+        type: "gate",
         position: this.objectivePlan.gatePosition,
         available: this.objectiveState.status !== "completed",
       },
+      ...this.loot.getInteractionCandidates(),
     ]);
   }
 
@@ -481,6 +617,72 @@ export class GameScene extends Phaser.Scene {
     this.completeFloor();
   }
 
+  private interactWithForge(): void {
+    if (!this.loot || !this.player || this.upgradeOverlay) return;
+    const result = this.loot.inspectOrOpenForge();
+    if (result.outcome === "insufficient") {
+      const message = `The Runeforge requires ${result.cost} shards. ${result.available} / ${result.cost} collected.`;
+      this.objectiveToast?.show("THE RUNEFORGE SLUMBERS", message);
+      announceGameState(message);
+      return;
+    }
+    if (result.outcome !== "opened") return;
+    const state = this.loot.getState();
+    if (state.forge.status !== "choosing") return;
+    this.runActivity = transitionActiveRunActivity(this.runActivity, "open-upgrade");
+    this.player.stopMovement();
+    this.combat?.pause();
+    this.enemies?.pause();
+    this.interactionPrompt?.setText(null);
+    this.upgradeOverlay = new UpgradeChoiceOverlay(
+      this,
+      result.offer,
+      state.availableShards,
+      state.forge.cost,
+      {
+        select: (upgradeId) => this.selectUpgrade(upgradeId),
+        close: () => this.closeUpgradeOverlay(),
+      },
+    );
+    announceGameState(
+      "Runeforge opened. Choose one of three run upgrades, or press Escape to leave.",
+    );
+  }
+
+  private closeUpgradeOverlay(): void {
+    if (this.runOutcome !== "active") return;
+    this.loot?.closeForge();
+    this.upgradeOverlay = undefined;
+    this.runActivity = transitionActiveRunActivity(this.runActivity, "resume");
+    this.enemies?.resume();
+    this.updateInteractionPrompt();
+  }
+
+  private selectUpgrade(upgradeId: UpgradeId): void {
+    if (this.runOutcome !== "active" || !this.loot || !this.combat) return;
+    if (!this.loot.selectUpgrade(upgradeId)) return;
+    const selected = this.loot.getState().selectedUpgradeIds;
+    this.combat.applyEffectiveStats(
+      deriveEffectivePlayerStats(selected),
+      upgradeId === "vital-rune",
+    );
+    this.upgradeOverlay = undefined;
+    this.runActivity = transitionActiveRunActivity(this.runActivity, "resume");
+    this.enemies?.resume();
+    const definition = getUpgrade(upgradeId);
+    this.objectiveToast?.show(definition.name, definition.description);
+    announceGameState(`${definition.name} selected. ${definition.description}`);
+    this.handleRewardStateChanged(this.loot.getState(), false);
+  }
+
+  private closeUpgradeOverlayForTerminal(): void {
+    if (!this.upgradeOverlay) return;
+    this.upgradeOverlay.destroy();
+    this.upgradeOverlay = undefined;
+    this.loot?.closeForge();
+    this.runActivity = "playing";
+  }
+
   private completeFloor(): void {
     if (
       !this.player ||
@@ -494,8 +696,10 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     this.runOutcome = transitionRunOutcome(this.runOutcome, "escape");
+    this.closeUpgradeOverlayForTerminal();
     this.combat.stopTerminal();
     this.enemies.stopAll();
+    this.loot?.freeze();
     this.interactionPrompt?.setText(null);
     this.hud?.updateObjective(this.objectiveState);
     this.hud?.updateTimer(this.objectiveState.completionTimeMs);
@@ -516,6 +720,7 @@ export class GameScene extends Phaser.Scene {
         return;
       }
       const vitality = this.combat.getVitality();
+      const rewards = this.loot?.getState() ?? createInitialRewardState();
       this.completionOverlay = new FloorCompleteOverlay(
         this,
         {
@@ -530,6 +735,11 @@ export class GameScene extends Phaser.Scene {
           totalEnemies: this.enemies.getTotalCount(),
           health: vitality.health,
           maximumHealth: vitality.maximumHealth,
+          totalCollectedShards: rewards.totalCollectedShards,
+          availableShards: rewards.availableShards,
+          openedChests: rewards.openedChestIds.size,
+          totalChests: this.lootPlan?.chests.length ?? 0,
+          selectedUpgrades: rewards.selectedUpgradeIds.map((id) => getUpgrade(id).name),
         },
         {
           replay: () => this.restartFloor(),
@@ -546,10 +756,32 @@ export class GameScene extends Phaser.Scene {
     announceGameState(`Player damaged. ${vitality.health} health remaining.`);
   }
 
-  private handleEnemyDefeated(): void {
+  private handleEnemyDefeated(
+    details: Readonly<{
+      enemyId: string;
+      roomId: number;
+      position: Readonly<{ x: number; y: number }>;
+    }>,
+  ): void {
     if (!this.enemies) return;
+    this.loot?.dropEnemyReward(details);
     this.hud?.updateEnemies(this.enemies.getDefeatedCount(), this.enemies.getTotalCount());
     this.updateMinimap();
+  }
+
+  private handleRewardStateChanged(state: RunRewardState, becameReady: boolean): void {
+    this.hud?.updateRewards(state, this.lootPlan?.chests.length ?? 0);
+    this.updateMinimap();
+    if (becameReady) {
+      const cost = state.forge.cost;
+      this.objectiveToast?.show(
+        "RUNEFORGE READY",
+        `Return to the spawn room. ${cost} shards are ready.`,
+      );
+      announceGameState(
+        `The Runeforge is ready. Return to the spawn room to choose a run upgrade.`,
+      );
+    }
   }
 
   private defeatRun(): void {
@@ -563,8 +795,10 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     this.runOutcome = transitionRunOutcome(this.runOutcome, "defeat");
+    this.closeUpgradeOverlayForTerminal();
     this.combat.stopTerminal();
     this.enemies.stopAll();
+    this.loot?.freeze();
     this.interactionPrompt?.setText(null);
     this.cameras.main.flash(260, 122, 28, 35, false);
     announceGameState("Fallen in the Catacombs. Replay this seed or generate a new dungeon.");
@@ -587,6 +821,12 @@ export class GameScene extends Phaser.Scene {
           totalRooms: this.layout.rooms.length,
           defeatedEnemies: this.enemies.getDefeatedCount(),
           totalEnemies: this.enemies.getTotalCount(),
+          totalCollectedShards: this.loot?.getState().totalCollectedShards ?? 0,
+          availableShards: this.loot?.getState().availableShards ?? 0,
+          openedChests: this.loot?.getState().openedChestIds.size ?? 0,
+          totalChests: this.lootPlan?.chests.length ?? 0,
+          selectedUpgrades:
+            this.loot?.getState().selectedUpgradeIds.map((id) => getUpgrade(id).name) ?? [],
         },
         {
           replay: () => this.restartFloor(),
@@ -601,6 +841,8 @@ export class GameScene extends Phaser.Scene {
     this.isTransitioning = true;
     this.combat?.stopTerminal();
     this.enemies?.stopAll();
+    this.loot?.freeze();
+    this.upgradeOverlay?.destroy();
     this.interactionPrompt?.setText(null);
     this.registry.set(ACTIVE_SEED_REGISTRY_KEY, this.layout.seed);
     this.scene.restart({ seed: this.layout.seed, entry: "restart" });
@@ -611,6 +853,8 @@ export class GameScene extends Phaser.Scene {
     this.isTransitioning = true;
     this.combat?.stopTerminal();
     this.enemies?.stopAll();
+    this.loot?.freeze();
+    this.upgradeOverlay?.destroy();
     this.interactionPrompt?.setText(null);
     const seed = createFriendlySeed(this.layout.seed);
     this.registry.set(ACTIVE_SEED_REGISTRY_KEY, seed);
@@ -671,13 +915,19 @@ export class GameScene extends Phaser.Scene {
   private updateInteractionPrompt(): void {
     const target = this.combat?.canInteract() === true ? this.currentInteractionTarget() : null;
     const text =
-      target === "key"
+      target?.type === "key"
         ? "E  ·  TAKE RUNIC KEY"
-        : target === "gate"
+        : target?.type === "gate"
           ? this.objectiveState.status === "seeking-key"
             ? "E  ·  INSPECT SEALED GATE"
             : "E  ·  OPEN ANCIENT GATE"
-          : null;
+          : target?.type === "chest"
+            ? "E  ·  OPEN TREASURE CHEST"
+            : target?.type === "forge"
+              ? this.loot?.getState().forge.status === "ready"
+                ? "E  ·  AWAKEN RUNEFORGE"
+                : "E  ·  INSPECT RUNEFORGE"
+              : null;
     this.interactionPrompt?.setText(text);
   }
 
@@ -688,25 +938,30 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updateMinimap(): void {
-    if (!this.discovery || !this.enemies) return;
-    this.minimap?.update(this.discovery, this.objectiveState, this.enemies.getAliveEnemyIds());
+    if (!this.discovery || !this.enemies || !this.loot) return;
+    this.minimap?.update(
+      this.discovery,
+      this.objectiveState,
+      this.enemies.getAliveEnemyIds(),
+      this.loot.getState(),
+    );
   }
 
   private announceFloorStart(entry: GameSceneData["entry"]): void {
     if (entry === "restart") {
       announceGameState(
-        "Floor restarted with the same seed. Find the Runic Key. Space, J, or click attacks; Shift dashes.",
+        "Floor restarted with the same seed. Loot and run upgrades reset. Find the Runic Key.",
       );
       return;
     }
     if (entry === "new") {
       announceGameState(
-        "New dungeon generated. Find the Runic Key, fight or evade enemies, and open the Ancient Gate.",
+        "New dungeon generated with fresh treasure and forge offers. Find the Runic Key and escape.",
       );
       return;
     }
     announceGameState(
-      "Generated dungeon ready. Find the Runic Key and open the Ancient Gate. Space, J, or click attacks; Shift dashes; E interacts.",
+      "Generated dungeon ready. Find the Runic Key. Enemies and Treasure Chests yield Runic Shards; Vitality Flasks heal; return to the Runeforge for upgrades.",
     );
   }
 }

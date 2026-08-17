@@ -1,11 +1,22 @@
 import { COMBAT_CONFIG, safeDelta } from "./config";
 import type { DamageTransition, PlayerVitality } from "./types";
 
-export function createInitialVitality(): PlayerVitality {
+export interface HealingTransition {
+  readonly state: PlayerVitality;
+  readonly restoredHealth: number;
+  readonly consumed: boolean;
+}
+
+export function createInitialVitality(
+  maximumHealth = COMBAT_CONFIG.playerMaximumHealth,
+): PlayerVitality {
+  if (!Number.isInteger(maximumHealth) || maximumHealth <= 0) {
+    throw new RangeError("Maximum health must be a positive integer.");
+  }
   return Object.freeze({
     status: "alive",
-    health: COMBAT_CONFIG.playerMaximumHealth,
-    maximumHealth: COMBAT_CONFIG.playerMaximumHealth,
+    health: maximumHealth,
+    maximumHealth,
     invulnerabilityRemainingMs: 0,
     hitStunRemainingMs: 0,
   });
@@ -15,6 +26,7 @@ export function applyPlayerDamage(
   state: PlayerVitality,
   damage: number,
   dashInvulnerable: boolean,
+  postHitInvulnerabilityMs: number = COMBAT_CONFIG.postDamageInvulnerabilityMs,
 ): DamageTransition {
   if (
     state.status === "defeated" ||
@@ -36,10 +48,48 @@ export function applyPlayerDamage(
     state: Object.freeze({
       ...state,
       health,
-      invulnerabilityRemainingMs: COMBAT_CONFIG.postDamageInvulnerabilityMs,
+      invulnerabilityRemainingMs: postHitInvulnerabilityMs,
       hitStunRemainingMs: COMBAT_CONFIG.hitStunMs,
     }),
     outcome: "accepted",
+  });
+}
+
+export function healPlayer(state: PlayerVitality, amount: number): HealingTransition {
+  if (!Number.isFinite(amount) || amount <= 0) {
+    throw new RangeError("Healing amount must be finite and positive.");
+  }
+  if (state.status === "defeated" || state.health >= state.maximumHealth) {
+    return Object.freeze({ state, restoredHealth: 0, consumed: false });
+  }
+  const health = Math.min(state.maximumHealth, state.health + amount);
+  return Object.freeze({
+    state: Object.freeze({ ...state, health }),
+    restoredHealth: health - state.health,
+    consumed: health > state.health,
+  });
+}
+
+export function increaseMaximumHealth(
+  state: PlayerVitality,
+  maximumHealth: number,
+  restoreAmount: number,
+): HealingTransition {
+  if (!Number.isInteger(maximumHealth) || maximumHealth <= 0) {
+    throw new RangeError("Maximum health must be a positive integer.");
+  }
+  if (!Number.isFinite(restoreAmount) || restoreAmount < 0) {
+    throw new RangeError("Maximum-health restoration must be finite and non-negative.");
+  }
+  if (state.status === "defeated") {
+    return Object.freeze({ state, restoredHealth: 0, consumed: false });
+  }
+  const current = Math.min(state.health, maximumHealth);
+  const health = Math.min(maximumHealth, current + restoreAmount);
+  return Object.freeze({
+    state: Object.freeze({ ...state, health, maximumHealth }),
+    restoredHealth: health - state.health,
+    consumed: true,
   });
 }
 
