@@ -28,7 +28,7 @@ Add deterministic one-per-non-spawn-room encounters, Bone Stalker pursuit, Ash W
 
 ## v0.4.1 milestone — Public web deployment
 
-**Status: Current infrastructure milestone; external launch verification pending**
+**Status: Complete, verified, deployed, and published**
 
 Publish the unchanged Phase 4 game as a root-hosted GitHub Pages site. Add canonical metadata, original generated branding assets, a production artifact audit, pinned GitHub Actions deployment, separate bridge-free live smoke tests, custom-domain configuration, DNS/HTTPS procedures, and non-destructive rollback documentation. This milestone adds no gameplay and does not begin Phase 5.
 

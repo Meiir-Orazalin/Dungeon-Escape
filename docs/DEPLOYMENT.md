@@ -42,10 +42,10 @@ Actions are pinned to immutable commits:
 
 The public, non-secret Actions variables are:
 
-| Variable                  | Value                          |
-| ------------------------- | ------------------------------ |
-| `PRODUCTION_URL`          | `https://meiirorazalin.com`    |
-| `PRODUCTION_DOMAIN_READY` | `false` until launch is proven |
+| Variable                  | Value                        |
+| ------------------------- | ---------------------------- |
+| `PRODUCTION_URL`          | `https://meiirorazalin.com`  |
+| `PRODUCTION_DOMAIN_READY` | `true` after verified launch |
 
 The Pages REST API is configured with `build_type: workflow` and `cname: meiirorazalin.com`. The API-managed custom-domain setting is deliberately used instead of a repository `CNAME` file, and branch-based Pages publication is not used.
 

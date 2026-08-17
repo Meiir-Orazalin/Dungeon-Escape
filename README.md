@@ -10,7 +10,7 @@ Canonical production URL: <https://meiirorazalin.com/>
 
 Fixed-seed example: <https://meiirorazalin.com/?seed=production-smoke>
 
-**Current deployment status:** Deployment infrastructure configured; custom-domain activation pending. The URL above becomes the public launch only after DNS, GitHub domain verification, certificate approval, HTTPS enforcement, and live smoke tests pass.
+**Current deployment status:** Live at <https://meiirorazalin.com/>. The apex and `www` hosts use an approved GitHub Pages certificate, plain HTTP redirects to HTTPS, and the bridge-free production smoke suite runs after every deployment.
 
 ## Current playable functionality
 
@@ -94,7 +94,7 @@ pnpm test:e2e
 pnpm check
 ```
 
-After the canonical domain is ready, run the separate bridge-free production suite with:
+Run the separate bridge-free production suite with:
 
 ```bash
 LIVE_BASE_URL=https://meiirorazalin.com pnpm test:live
