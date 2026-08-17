@@ -99,6 +99,7 @@ export class UpgradeChoiceOverlay {
     this.closeZone = scene.add
       .zone(868, 70, 42, 42)
       .setName(LOOT_GAME_OBJECT_NAMES.UPGRADE_CLOSE)
+      .setScrollFactor(0)
       .setInteractive({ useHandCursor: true });
     this.closeZone.on("pointerover", () => closeLabel.setColor("#ffe0a1"));
     this.closeZone.on("pointerout", () => closeLabel.setColor("#9fa9a7"));
@@ -177,6 +178,7 @@ export class UpgradeChoiceOverlay {
     const zone = this.scene.add
       .zone(x, 285, 245, 245)
       .setName(`${LOOT_GAME_OBJECT_NAMES.UPGRADE_CARD_PREFIX}${id}`)
+      .setScrollFactor(0)
       .setInteractive({ useHandCursor: true });
     zone.on("pointerover", () => {
       this.highlightedIndex = index;

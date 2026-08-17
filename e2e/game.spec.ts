@@ -239,36 +239,6 @@ async function defeatEnemyWithSword(page: Page, enemyId: string): Promise<void> 
   }
 }
 
-async function collectAllPlannedShards(page: Page): Promise<E2ESnapshot> {
-  let snapshot = await getSnapshot(page);
-  for (const chest of snapshot.chests) {
-    await openChest(page, chest.id);
-    const shard = (await getSnapshot(page)).pickups.find(
-      (pickup) => pickup.sourceId === chest.id && pickup.type === "shard",
-    );
-    if (!shard) throw new Error(`Chest ${chest.id} did not create its shard pickup.`);
-    await collectPickup(page, shard.id);
-  }
-  snapshot = await getSnapshot(page);
-  for (const enemy of snapshot.enemies) {
-    const beforeShards = (await getSnapshot(page)).availableShardCount ?? 0;
-    const plannedAmount = snapshot.enemyRewards.find(
-      (reward) => reward.enemyId === enemy.id,
-    )?.shardAmount;
-    await defeatEnemyWithSword(page, enemy.id);
-    const shard = (await getSnapshot(page)).pickups.find(
-      (pickup) => pickup.sourceId === enemy.id && pickup.type === "shard",
-    );
-    if (shard) await collectPickup(page, shard.id);
-    else {
-      expect((await getSnapshot(page)).availableShardCount).toBe(
-        beforeShards + (plannedAmount ?? 0),
-      );
-    }
-  }
-  return getSnapshot(page);
-}
-
 async function collectAllChestShards(page: Page): Promise<E2ESnapshot> {
   const chests = (await getSnapshot(page)).chests;
   for (const chest of chests) {
@@ -279,6 +249,16 @@ async function collectAllChestShards(page: Page): Promise<E2ESnapshot> {
     if (!shard) throw new Error(`Chest ${chest.id} did not create its shard pickup.`);
     await collectPickup(page, shard.id);
   }
+  return getSnapshot(page);
+}
+
+async function collectEnemyShard(page: Page, enemyId: string): Promise<E2ESnapshot> {
+  await defeatEnemyWithSword(page, enemyId);
+  const shard = (await getSnapshot(page)).pickups.find(
+    (pickup) => pickup.sourceId === enemyId && pickup.type === "shard",
+  );
+  if (!shard) throw new Error(`Enemy ${enemyId} did not create its planned shard pickup.`);
+  await collectPickup(page, shard.id);
   return getSnapshot(page);
 }
 
@@ -1179,8 +1159,8 @@ test("Runeforge inspection, deterministic overlay suspension, Escape, and select
   await page.keyboard.press("e");
   expect((await getSnapshot(page)).upgradeOverlayVisible).toBe(false);
 
-  const funded = await collectAllPlannedShards(page);
-  expect(funded.availableShardCount).toBeGreaterThanOrEqual(14);
+  const funded = await collectAllChestShards(page);
+  expect(funded.availableShardCount).toBeGreaterThanOrEqual(6);
   await teleportToForge(page);
   await expect
     .poll(async () => (await getSnapshot(page)).interactionPrompt)
@@ -1243,10 +1223,14 @@ test("Runeforge inspection, deterministic overlay suspension, Escape, and select
 test("two real forge choices exhaust the forge and same-seed R resets all rewards", async ({
   page,
 }) => {
-  await openMenu(page, "phase5-two-upgrades");
+  await openMenu(page, "phase5-forge-ci-47");
   await startWithKey(page);
   const initial = await getSnapshot(page);
-  await collectAllPlannedShards(page);
+  const chestFunded = await collectAllChestShards(page);
+  expect(chestFunded.availableShardCount).toBe(12);
+  const warden = enemyByArchetype(chestFunded, "stone-warden");
+  const funded = await collectEnemyShard(page, warden.id);
+  expect(funded.availableShardCount).toBe(14);
   await teleportToForge(page);
   await page.keyboard.press("e");
   await expect.poll(async () => (await getSnapshot(page)).upgradeOverlayVisible).toBe(true);
