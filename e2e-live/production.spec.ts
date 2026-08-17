@@ -49,8 +49,12 @@ test("canonical document metadata and public assets are production-ready", async
   const response = await page.goto("/", { waitUntil: "networkidle" });
 
   expect(response?.ok()).toBe(true);
-  expect(page.url()).toBe(CANONICAL_URL);
-  expect(new URL(page.url()).protocol).toBe("https:");
+  expect(response?.url()).toBe(CANONICAL_URL);
+  const runtimeUrl = new URL(page.url());
+  expect(runtimeUrl.protocol).toBe("https:");
+  expect(runtimeUrl.hostname).toBe("meiirorazalin.com");
+  expect(runtimeUrl.pathname).toBe("/");
+  expect(runtimeUrl.searchParams.get("seed")).toMatch(/^[a-z0-9_-]{1,48}$/);
   await expect(page).toHaveTitle(DOCUMENT_TITLE);
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", CANONICAL_URL);
   await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", DESCRIPTION);
