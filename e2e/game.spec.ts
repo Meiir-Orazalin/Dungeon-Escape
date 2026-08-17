@@ -866,6 +866,13 @@ test("Stone Warden telegraphs, charges without steering, recovers, and is sword-
   await expect
     .poll(async () => enemyById(await getSnapshot(page), warden.id).state)
     .toBe("wind-up");
+  const windUpSnapshot = await getSnapshot(page);
+  const windUpPosition = enemyById(windUpSnapshot, warden.id).position;
+  const playerAtWindUp = windUpSnapshot.playerPosition ?? windUpPosition;
+  const lockedDirection = {
+    x: playerAtWindUp.x - windUpPosition.x,
+    y: playerAtWindUp.y - windUpPosition.y,
+  };
   await expect
     .poll(async () => enemyById(await getSnapshot(page), warden.id).state, {
       timeout: 4_000,
@@ -874,11 +881,6 @@ test("Stone Warden telegraphs, charges without steering, recovers, and is sword-
     .toBe("charge");
   const chargeSnapshot = await getSnapshot(page);
   const chargeStart = enemyById(chargeSnapshot, warden.id).position;
-  const playerAtCharge = chargeSnapshot.playerPosition ?? chargeStart;
-  const lockedDirection = {
-    x: playerAtCharge.x - chargeStart.x,
-    y: playerAtCharge.y - chargeStart.y,
-  };
   const steeringKey =
     Math.abs(lockedDirection.x) >= Math.abs(lockedDirection.y) ? "ArrowDown" : "ArrowRight";
   await page.keyboard.down(steeringKey);
