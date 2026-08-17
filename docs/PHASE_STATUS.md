@@ -4,9 +4,10 @@
 
 - **Version:** `v0.5.0`
 - **Phase:** Phase 5 — Deterministic Loot and Run Upgrades
-- **State:** Implementation complete; release verification pending
+- **State:** Complete, verified, deployed, and published
 - **Canonical production URL:** `https://meiirorazalin.com/`
-- **Phase 5 implementation commit:** Pending the verified implementation commit
+- **Phase 5 implementation commit:** `7a6babae7fd5ff233aef231af0bd19caa5b54bdc`
+- **Focused verification fixes:** `6dc70b243b7674870a8b2509ed68527d0e9ee4ff`, `035f49bfb62a974f2b6175184d668ea6ef2052f3`
 
 The release remains on the existing static GitHub Pages architecture: `main` builds with the explicit Vite base `/`, only `dist` is deployed, HTTPS is enforced for `meiirorazalin.com`, and the readiness-gated bridge-free live smoke job follows each deployment. Phase 5 changes gameplay and accurate documentation only; it does not alter DNS, Pages, certificate, analytics, persistence, or backend configuration.
 
@@ -53,21 +54,29 @@ Loot and upgrades remain optional: unopened chests, uncollected pickups, zero up
 
 ## Verification record
 
-The implementation has passed the focused development gates while this record awaits the final two-commit release flow:
+The required local commands completed with these exact results:
 
+- `pnpm format`: passed
+- `pnpm install`: passed; dependencies were already current
+- `pnpm install --frozen-lockfile`: passed; the lockfile was current
 - `pnpm format:check`: passed
 - `pnpm lint`: passed with zero warnings
 - `pnpm typecheck`: passed under strict TypeScript
 - `pnpm test:run`: 15 files and 257 unit tests passed, including 100 representative valid loot plans
 - `pnpm build`: passed with the existing Vite/Phaser production configuration
-- `pnpm audit:production`: 47 assertions passed, including all Phase 4 and new Phase 5 bridge identifiers
+- `pnpm audit:production`: 47 assertions passed across 10 deployed files, including all Phase 4 and new Phase 5 bridge identifiers
 - `pnpm test:e2e`: the sandboxed command reproduced `listen EPERM` on `127.0.0.1:4173`; the exact unrestricted rerun passed all 30 Chromium tests
-- Local visual review: passed at 1440 × 900, 960 × 540, 1024 × 640, and 720 × 700 across menu, chest, pickup, forge, all six cards, selection, exhausted HUD/build, completion, and defeat states, with no page scroll or browser diagnostics
 - `pnpm check`: passed all formatting, lint, strict TypeScript, unit, build, and production-audit gates
-- Deployment workflows, post-deployment live smoke, and live visual review: pending the implementation push
-- Baseline `LIVE_BASE_URL=https://meiirorazalin.com pnpm test:live`: all 5 Chromium tests passed before Phase 5 deployment
+- `git diff --check`: passed
+- `LIVE_BASE_URL=https://meiirorazalin.com pnpm test:live`: all 5 Chromium tests passed before implementation and again after the Phase 5 deployment
 
 The initial sandboxed browser baseline command also reproduced the documented `listen EPERM` condition on `127.0.0.1:4173`; its exact unrestricted rerun passed all 22 pre-Phase-5 Chromium tests. The final expanded suite preserves those tests and adds eight Phase 5 scenarios.
+
+Local visual review passed at 1440 × 900, 960 × 540, 1024 × 640, and 720 × 700 across menu, closed/open chests, shard and flask pickups, healing, dormant/ready/exhausted forge states, all six upgrade cards, upgrade selection, HUD/build, minimap, completion, and defeat. The deployed `phase5-production-review` seed also passed live review at 1440 × 900 and 720 × 700 with the correct HTTPS host and query, readable menu/game, centered canvas, no scrolling, failed assets, browser diagnostics, mixed content, development overlay, or production test bridge.
+
+Quality run `32007460397` passed for deployed commit `035f49bfb62a974f2b6175184d668ea6ef2052f3`. Deploy Production run `32007460408` passed: Verify and deploy job `95319788527` and readiness-gated Live production smoke job `95321114238` both succeeded. An earlier deployment exposed CI-only forge pointer/timing instability and an over-late Warden direction sample; focused commits `6dc70b243b7674870a8b2509ed68527d0e9ee4ff` and `035f49bfb62a974f2b6175184d668ea6ef2052f3` corrected those tests without weakening the gameplay contract.
+
+GitHub Pages remains `build_type: workflow` with `cname: meiirorazalin.com`, verified protected-domain state, approved certificate for the apex and `www`, and HTTPS enforcement enabled. `PRODUCTION_DOMAIN_READY=true`; the repository homepage remains the canonical URL. The HTTPS seed URL returned `200`, plain HTTP returned `301` to HTTPS, and `www` redirected to the canonical apex while preserving the seed query.
 
 ## Production isolation
 
@@ -76,13 +85,14 @@ Production audit scans built text assets for `__DUNGEON_ESCAPE_E2E__`, `installE
 ## Known limitations and deferred work
 
 - The run remains a single keyboard/pointer-first floor; enemies remain room-bound.
+- The minified production JavaScript chunk is approximately 1.51 MB and produces Vite's existing advisory chunk-size warning; the build and 47-check production audit pass, and the preserved warning threshold was not changed for this gameplay release.
 - Runic Shards and upgrades are run-only and intentionally reset by both `R` and `N`.
 - There is no inventory, equipment, rarity, crafting, shop, experience, character level, persistent progression, save, account, multiple floor, boss, scaling, score, achievement, trap, audio, pause menu, virtual control, analytics, backend, service worker, or offline mode.
 - Phase 6 through Phase 8 remain deferred.
 
 ## Release intent and historical targets
 
-After final local verification, the implementation will be committed as `feat: add deterministic loot and run upgrades`, deployed and live-verified, then this record will receive the exact commit/workflow evidence. The final verified `main` is intended for annotated tag `v0.5.0`; this document does not invent the release-record commit's own SHA.
+Implementation commit `7a6babae7fd5ff233aef231af0bd19caa5b54bdc` and its focused verification fixes are deployed and live-verified. The final verified `main` containing this record is intended for annotated tag `v0.5.0`; this document does not invent the release-record commit's own SHA.
 
 - `v0.4.1` → `fdeea817472b3a8c5db41b2d331373a3a97ebe33`
 - `v0.4.0` → `b7dd859e6b2106e5f17066d38d55f5bba2514529`
