@@ -986,8 +986,7 @@ test("contact damage uses invulnerability and dash movement grants contact immun
   await expect.poll(async () => (await getSnapshot(page)).playerInvulnerable).toBe(false);
 
   const beforeDash = await getSnapshot(page);
-  await page.keyboard.down("Shift");
-  await waitForDashActive(page);
+  await Promise.all([waitForDashActive(page), page.keyboard.down("Shift")]);
   const duringDash = await page.evaluate(async (enemyId) => {
     const bridge = (window as TestWindow).__DUNGEON_ESCAPE_E2E__;
     if (!bridge) throw new Error("The E2E bridge is unavailable.");
