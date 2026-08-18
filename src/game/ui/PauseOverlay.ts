@@ -112,7 +112,12 @@ export class PauseOverlay {
       )
       .setOrigin(0.5);
     this.container.add(quick);
-    this.registerInput();
+    // The overlay can be constructed from GameScene's keydown-ESC listener. Defer
+    // registration so this overlay cannot consume that same opening event and
+    // immediately resume on EventEmitter implementations that visit new listeners.
+    queueMicrotask(() => {
+      if (!this.destroyed) this.registerInput();
+    });
     scene.events.once(Phaser.Scenes.Events.SHUTDOWN, this.destroy, this);
   }
 
