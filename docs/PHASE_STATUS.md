@@ -4,10 +4,14 @@
 
 - **Version:** `v0.7.0`
 - **Phase:** Phase 7 — Presentation, Audio, Accessibility, and Balancing
-- **State:** Complete, locally verified, deployed, and independently live-verified; annotated publication follows the final verification commit
+- **State:** Complete, locally verified, deployed, and independently live-verified; annotated publication follows this corrected final verification record
 - **Canonical production URL:** `https://meiirorazalin.com/`
 - **Phase 7 implementation commit:** `71beaf465c64b0e19f39b6568e638cff3c9d8299`
-- **Focused fix commits:** `713db18af5f24dbcce1ba0be67e5bcaa2908ac43` (defer Pause-overlay keyboard registration past the opening Escape event) and `1b913b7d8b18f39dc7c254a79fde031201c25f4e` (arm the real-dash E2E observer before its 130 ms transient state begins)
+- **Focused fix commits:**
+  - `713db18af5f24dbcce1ba0be67e5bcaa2908ac43` — defer Pause-overlay keyboard registration past the opening Escape event
+  - `1b913b7d8b18f39dc7c254a79fde031201c25f4e` — arm the real-dash E2E observer before its 130 ms transient state begins
+  - `8c00e93c40084daeb1f18845857365237d0fd7d9` — give the three-cycle real defeat-control composite test its explicit CI time budget without changing its assertions
+  - `21c808f8882818f8dc2cf4cd1ea3dbfb9f2421cb` — replace live `networkidle` dependence with explicit canvas/application readiness while retaining metadata, asset, redirect, startup, diagnostics, and bridge-isolation checks
 
 The previously published Phase 6 release is annotated tag `v0.6.0` at peeled target `97b15629875c5ae664fe49e988eafbbf0a60518e`. Its production configuration remains unchanged: Vite base `/`, workflow Pages deployment of `dist` from `main`, verified `meiirorazalin.com`, approved certificate, enforced HTTPS, `PRODUCTION_DOMAIN_READY=true`, and bridge-free live smoke after deploy.
 
@@ -58,11 +62,11 @@ LIVE_BASE_URL=https://meiirorazalin.com pnpm test:live
 Verified implementation evidence:
 
 - Unit tests: `304` passed across `19` files, preserving the Phase 6 100-RunPlan/300-floor validation.
-- Local Chromium: `43` passed in the final full run, including onboarding, settings, Pause/focus, audio state, awakening/health bars, all existing combat/loot/run paths, responsive behavior, and production bridge isolation. The corrected transient dash observer also passed `10 / 10` CI-mode stress repetitions.
+- Local Chromium: `43` passed in the final full run, including onboarding, settings, Pause/focus, audio state, awakening/health bars, all existing combat/loot/run paths, responsive behavior, and production bridge isolation. The corrected transient dash observer passed `10 / 10` CI-mode stress repetitions; a one-off browser-startup stall before bridge installation was not reproducible when the unchanged repeated-new-run case passed `3 / 3`, after which the clean full run passed.
 - Audio audit: `275` checks passed for `22` files totaling `1,892,860` bytes.
 - Production audit: `101` checks passed across `34` deployed files.
 - Bundle report: application `205,463` bytes (`53,568` gzip), Phaser vendor `1,374,829` bytes (`355,968` gzip), total JavaScript `1,580,292` bytes (`409,536` gzip), CSS `5,140` bytes (`1,860` gzip). The application chunk is below 350 kB, Phaser appears in exactly one vendor chunk, the warning threshold remains `1,500` kB, and Vite emits no chunk-size warning.
-- Live Chromium: the `5` bridge-free tests passed independently against the deployed Phase 7 implementation. The suite confirmed canonical metadata and redirects, fixed-seed startup, the production audio manifest and representative ambience/effect assets, stable Menu Settings/How to Play presentation, no external audio, and no production E2E bridge.
+- Live Chromium: the final `5` bridge-free tests passed independently in `1.2` minutes against deployed commit `21c808f8882818f8dc2cf4cd1ea3dbfb9f2421cb`. The suite confirmed canonical metadata and redirects, explicit canvas/application readiness, fixed-seed startup, the production audio manifest and representative ambience/effect assets, stable Menu Settings/How to Play presentation, no external audio, and no production E2E bridge.
 - Visual review: passed at `1440 × 900`, `1024 × 640`, `960 × 540`, `720 × 700`, and `390 × 844`. Menu, onboarding, Manual, Settings, Pause, high contrast/large text/reduced motion, all floor introductions/themes, awakening, health bars, low health, Runeforge, Floor Cleared, victory, and defeat were inspected without clipping, modal overlap, page overflow, stale floor presentation, or unreadable HUD/minimap state.
 - Audio review: all 22 files played locally at moderate volume. Deterministic waveform inspection measured peaks from `0.1289` to `0.3122`, nonzero RMS, and zero-amplitude boundaries for every file; no clipping or abrupt edge was detected. The three ambience recipes remain distinct, routine effects remain short/subordinate, player hit is clear, and victory/defeat identities differ. All cues retain visual equivalents.
 
@@ -82,7 +86,10 @@ Verified implementation evidence:
 - Live production smoke job `95618728958`: success; all `5` bridge-free Chromium tests passed after deployment.
 - Focused Pause fix `713db18af5f24dbcce1ba0be67e5bcaa2908ac43`: Quality run `32108150537` succeeded. Deploy run `32108150518` stopped before Pages upload when its slower Linux browser job exposed the pre-existing 130 ms dash-observation race; no broken artifact was deployed.
 - Focused dash-observer fix `1b913b7d8b18f39dc7c254a79fde031201c25f4e`: Quality run `32109516033` and `quality` job `95625729686` succeeded. Deploy Production run `32109516053`, Verify and deploy job `95625730166`, and live production smoke job `95627587405` all succeeded.
-- Independent post-deploy command `LIVE_BASE_URL=https://meiirorazalin.com pnpm test:live`: `5` passed against the final focused-fix deployment.
+- Verification-record commit `64f9d5982c019ec3bb07bccf1c667efdadd05bde`: Quality run `32110910543` and `quality` job `95629930928` succeeded. Deploy run `32110910586` stopped before artifact audit/upload when Verify and deploy job `95629931383` showed that one composite real-defeat control test needed more than its implicit 30-second default on Linux; Pages and live smoke were correctly skipped.
+- Focused composite-test fix `8c00e93c40084daeb1f18845857365237d0fd7d9`: Quality run `32112254316` and `quality` job `95634044154` succeeded. Deploy Production run `32112254296`, Verify and deploy job `95634044066`, and live production smoke job `95636419275` all succeeded without changing gameplay or assertions.
+- Focused live-readiness fix `21c808f8882818f8dc2cf4cd1ea3dbfb9f2421cb`: Quality run `32122480871` and `quality` job `95665742021` succeeded. Deploy Production run `32122480869`, Verify and deploy job `95665742204`, and live production smoke job `95667966579` all succeeded. The live suite now uses bounded explicit canvas/application readiness instead of waiting for every Phase 7 audio request to leave the network idle.
+- Independent post-deploy command `LIVE_BASE_URL=https://meiirorazalin.com pnpm test:live`: `5 / 5` passed in `1.2` minutes against the final focused-fix deployment.
 - Live review at `https://meiirorazalin.com/?seed=phase7-production-review`: canonical HTTPS presentation loaded at `720 × 700`; the Phase 7 Menu, Settings, How to Play, and Fullscreen controls rendered without overflow or clipping, and the automated diagnostics found no failed assets, mixed content, external audio request, autoplay exception, development overlay, or production bridge.
 - Production architecture remains Vite base `/`, dist-only workflow Pages deployment from `main`, canonical `meiirorazalin.com`, enforced HTTPS, and `PRODUCTION_DOMAIN_READY=true`; no DNS, Pages, certificate, homepage, or repository-variable setting changed.
 
