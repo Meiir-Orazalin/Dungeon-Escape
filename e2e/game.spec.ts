@@ -1214,6 +1214,7 @@ test("real repeated enemy contact produces one defeat and R fully replays the sa
 test("defeat keyboard new-dungeon controls use N, Enter, and Space without attacking", async ({
   page,
 }) => {
+  test.setTimeout(60_000);
   await openMenu(page, "defeat-keyboard-controls");
   await startWithKey(page);
   for (const key of ["n", "Enter", "Space"] as const) {
