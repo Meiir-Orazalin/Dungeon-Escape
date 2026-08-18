@@ -102,6 +102,26 @@ interface MovementKeys {
   readonly right: Phaser.Input.Keyboard.Key;
 }
 
+const GAMEPLAY_CAPTURED_KEY_CODES: number[] = [
+  Phaser.Input.Keyboard.KeyCodes.UP,
+  Phaser.Input.Keyboard.KeyCodes.DOWN,
+  Phaser.Input.Keyboard.KeyCodes.LEFT,
+  Phaser.Input.Keyboard.KeyCodes.RIGHT,
+  Phaser.Input.Keyboard.KeyCodes.W,
+  Phaser.Input.Keyboard.KeyCodes.A,
+  Phaser.Input.Keyboard.KeyCodes.S,
+  Phaser.Input.Keyboard.KeyCodes.D,
+  Phaser.Input.Keyboard.KeyCodes.SPACE,
+  Phaser.Input.Keyboard.KeyCodes.SHIFT,
+  Phaser.Input.Keyboard.KeyCodes.E,
+  Phaser.Input.Keyboard.KeyCodes.H,
+  Phaser.Input.Keyboard.KeyCodes.J,
+  Phaser.Input.Keyboard.KeyCodes.M,
+  Phaser.Input.Keyboard.KeyCodes.F,
+  Phaser.Input.Keyboard.KeyCodes.R,
+  Phaser.Input.Keyboard.KeyCodes.N,
+];
+
 interface GameSceneData {
   readonly seed?: string;
   readonly runPlan?: RunPlan;
@@ -762,6 +782,7 @@ export class GameScene extends Phaser.Scene {
   private registerInput(): void {
     const keyboard = this.input.keyboard;
     if (!keyboard) throw new Error("Dungeon Escape requires keyboard input support.");
+    keyboard.addCapture(GAMEPLAY_CAPTURED_KEY_CODES);
     this.cursors = keyboard.createCursorKeys();
     this.wasd = {
       up: keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.W),
@@ -1692,6 +1713,7 @@ export class GameScene extends Phaser.Scene {
     this.dashKey?.off("down", this.handleDashDown, this);
     this.dashKey?.off("up", this.handleDashUp, this);
     const keyboard = this.input.keyboard;
+    keyboard?.removeCapture(GAMEPLAY_CAPTURED_KEY_CODES);
     keyboard?.off("keydown-ESC", this.handlePauseDown, this);
     keyboard?.off("keyup-ESC", this.handlePauseUp, this);
     keyboard?.off("keydown-H", this.handleManualShortcut, this);

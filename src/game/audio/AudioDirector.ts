@@ -2,6 +2,7 @@ import Phaser from "phaser";
 
 import type { PresentationSettings } from "../presentation/settings";
 import { AUDIO_CROSSFADE_MS, AUDIO_EFFECT_VOICE_CAP } from "./config";
+import { AUDIO_EFFECT_IDS, FLOOR_AMBIENCE_IDS } from "./config";
 import { ambienceForFloor } from "./floorAmbience";
 import type { AudioEffectId, FloorAmbienceId } from "./types";
 import { deriveEffectiveAudioGains } from "./volume";
@@ -47,6 +48,8 @@ export class AudioDirector {
   private crossfadeTimers = new Set<ReturnType<typeof globalThis.setTimeout>>();
   private readonly lastRateLimitedAt = new Map<AudioEffectId, number>();
   private readonly supported: boolean;
+  private loading = false;
+  private loaded = false;
 
   public constructor(
     private readonly game: Phaser.Game,
@@ -55,6 +58,22 @@ export class AudioDirector {
     this.settings = settings;
     this.supported = !(game.sound instanceof Phaser.Sound.NoAudioSoundManager);
     game.events.once(Phaser.Core.Events.DESTROY, this.destroy, this);
+  }
+
+  public loadNonBlocking(scene: Phaser.Scene): void {
+    if (!this.supported || this.loading || this.loaded) return;
+    this.loading = true;
+    const ids = [...FLOOR_AMBIENCE_IDS, ...AUDIO_EFFECT_IDS];
+    ids.forEach((id) => {
+      if (!this.game.cache.audio.exists(id)) scene.load.audio(id, `/audio/${id}.wav`);
+    });
+    const finish = (): void => {
+      this.loading = false;
+      this.loaded = true;
+      if (this.unlocked && this.desiredAmbience && !this.paused) this.startDesiredAmbience();
+    };
+    scene.load.once(Phaser.Loader.Events.COMPLETE, finish);
+    scene.load.start();
   }
 
   public applySettings(settings: PresentationSettings): void {

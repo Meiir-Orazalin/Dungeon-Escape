@@ -1,6 +1,6 @@
 # Dungeon Escape
 
-Dungeon Escape is a deterministic dark-fantasy browser action game. Version `v0.7.0` polishes the complete three-floor run with original generated audio, first-run guidance, real pause, presentation settings, accessibility modes, clearer combat feedback, and bundle separation.
+Dungeon Escape is a stable deterministic dark-fantasy browser action game. Version `v1.0.0` completes the eight-phase project with cross-browser release hardening, Canvas fallback, graceful capability handling, lifecycle soak coverage, accessibility contrast validation, and enforced deployment budgets.
 
 Everything visible is drawn with original programmatic Phaser shapes and textures. All audio is synthesized by repository-owned code. The project loads no external art, fonts, audio, runtime CDNs, APIs, analytics, or backend services.
 
@@ -8,7 +8,7 @@ Everything visible is drawn with original programmatic Phaser shapes and texture
 
 Canonical production URL: <https://meiirorazalin.com/>
 
-Fixed-run example: <https://meiirorazalin.com/?seed=phase7-production-review>
+Fixed-run example: <https://meiirorazalin.com/?seed=v1-production-review>
 
 **Current deployment status:** Live at <https://meiirorazalin.com/>. Every verified push to `main` automatically deploys the `dist` artifact through GitHub Pages, followed by the bridge-free production smoke suite.
 
@@ -33,8 +33,10 @@ Fixed-run example: <https://meiirorazalin.com/?seed=phase7-production-review>
 - Master/ambience/effects volume, quick mute, reduced motion, screen-shake control, high contrast, large text, and guarded fullscreen
 - Enemy health bars, low-health presentation, floor titles, and a one-time 450 ms first-discovery awakening grace
 - Bounded audio/effect voices and separated Phaser/application production chunks
+- Automated Chromium, Firefox, and WebKit release coverage, with Phaser.AUTO preferring WebGL and falling back to Canvas
+- Friendly renderer-failure guidance, non-blocking audio loading, guarded optional capabilities, and a discreet `v1.0.0` display
 
-Only presentation and onboarding preferences persist. There is no general inventory, permanent progression, or saved run state; reloading starts a fresh Floor 1 run. Bosses, traps, equipment, scoring, save games, mobile controls, controller support, and Phase 8 final hardening remain deferred.
+Only presentation and onboarding preferences persist. There is no general inventory, permanent progression, or saved run state; reloading starts a fresh Floor 1 run. Bosses, traps, equipment, scoring, save games, mobile controls, controller support, and offline support are not included.
 
 ## Run, combat, loot, and reset behavior
 
@@ -65,7 +67,7 @@ The same run seed reproduces all three ordered floor seeds, themes, difficulty p
 - Vite 8 with explicit production base `/`
 - Vanilla strict TypeScript
 - Phaser 4.2.1 with Arcade Physics
-- Vitest and Playwright with Chromium
+- Vitest and Playwright with Chromium, Firefox, and WebKit release projects
 - GitHub Pages deployed by GitHub Actions from `main`
 - ESLint and Prettier
 
@@ -88,6 +90,7 @@ Open <http://127.0.0.1:5173/>.
 pnpm build
 pnpm audit:audio
 pnpm audit:production
+pnpm audit:release
 pnpm preview
 ```
 
@@ -102,11 +105,18 @@ pnpm typecheck
 pnpm test:run
 pnpm audit:audio
 pnpm test:e2e
+pnpm test:e2e:release
+pnpm test:e2e:canvas
+pnpm test:soak
 pnpm check
+pnpm check:release
 LIVE_BASE_URL=https://meiirorazalin.com pnpm test:live
+LIVE_BASE_URL=https://meiirorazalin.com pnpm test:live:matrix
 ```
 
 Local E2E tests use a build-time-isolated bridge for deep deterministic gameplay coverage. Live tests are bridge-free and verify public metadata, redirects, startup, assets, HTTPS, and production isolation.
+
+The full Chromium suite owns deep gameplay coverage. A focused release suite runs in the pinned Chromium, Firefox, and WebKit engines; a forced-Canvas E2E build proves renderer fallback; and a deterministic soak checks bounded scene, overlay, audio, and effect lifecycle state. See [browser support](docs/BROWSER_SUPPORT.md) for the evidence-based support contract.
 
 ## Controls
 
@@ -139,5 +149,10 @@ Every verified push to `main` runs **Quality** and **Deploy Production**. Deploy
 - [Escape objective](docs/ESCAPE_OBJECTIVE.md)
 - [Dungeon generation](docs/DUNGEON_GENERATION.md)
 - [Deployment and rollback](docs/DEPLOYMENT.md)
+- [Browser support](docs/BROWSER_SUPPORT.md)
+- [Release hardening](docs/RELEASE_HARDENING.md)
+- [Release checklist](docs/RELEASE_CHECKLIST.md)
+- [v1.0.0 release notes](docs/RELEASE_NOTES_1.0.0.md)
+- [Changelog](CHANGELOG.md)
 - [Implementation plan](docs/IMPLEMENTATION_PLAN.md)
 - [Current phase status](docs/PHASE_STATUS.md)

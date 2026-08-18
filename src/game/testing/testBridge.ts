@@ -6,8 +6,14 @@ import { Player } from "../entities/Player";
 import { LOOT_GAME_OBJECT_NAMES } from "../loot/config";
 import { GAME_OBJECT_NAMES } from "../objective/config";
 import { GameScene, type GameSceneSnapshot } from "../scenes/GameScene";
+import { collectLifecycleDiagnostics, type LifecycleDiagnostics } from "./lifecycleDiagnostics";
+import type { RuntimeCapabilities } from "../platform/capabilities";
+import { RELEASE_IDENTITY } from "../platform/version";
 
 export interface E2ESnapshot {
+  readonly releaseVersion: string;
+  readonly capabilities: RuntimeCapabilities | null;
+  readonly lifecycle: LifecycleDiagnostics;
   readonly activeScene: string | null;
   readonly playerPosition: GameSceneSnapshot["playerPosition"] | null;
   readonly spawnPosition: GameSceneSnapshot["spawnPosition"] | null;
@@ -152,8 +158,13 @@ export function installE2EBridge(game: Phaser.Game): void {
       const activeScene = game.scene.getScenes(true).at(-1)?.scene.key ?? null;
       const gameScene = game.scene.getScene(SCENE_KEYS.GAME);
       const gameSnapshot = gameScene instanceof GameScene ? gameScene.getTestSnapshot() : null;
+      const capabilities = game.registry.get("runtime-capabilities") as
+        RuntimeCapabilities | undefined;
 
       return {
+        releaseVersion: RELEASE_IDENTITY.version,
+        capabilities: capabilities ?? null,
+        lifecycle: collectLifecycleDiagnostics(game, gameSnapshot),
         activeScene,
         playerPosition: gameSnapshot?.playerPosition ?? null,
         spawnPosition: gameSnapshot?.spawnPosition ?? null,

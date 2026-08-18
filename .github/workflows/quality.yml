@@ -25,5 +25,5 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run non-browser quality gates
-        run: pnpm check
+      - name: Run final release quality gates
+        run: pnpm check:release

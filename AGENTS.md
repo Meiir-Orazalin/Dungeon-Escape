@@ -36,6 +36,11 @@ These instructions apply to the entire Dungeon Escape repository.
 - Presentation settings may persist, but run progress must never persist.
 - Reduced motion suppresses shake and nonessential motion; Pause must preserve the exact runtime.
 - Keep `chunkSizeWarningLimit` at 1,500 kB and report bundle warnings rather than hiding them.
+- Preserve the v0.7.0 planning-compatibility fixture for the stable release.
+- Production uses Phaser.AUTO; full Chromium, cross-browser core, Canvas fallback, soak, and live-matrix tests gate release deployment.
+- Keep E2E renderer overrides and lifecycle diagnostics absent from production.
+- Do not increase final size or lifecycle budgets without explicit owner approval.
+- Do not change a software license without explicit owner approval.
 
 ## Documentation
 

@@ -112,3 +112,7 @@ Phase 6 does not add a fourth floor, boss, arena, traps, audio/music, cinematics
 Phase 7 does not change `RunPlan`, floor-seed derivation, the run fingerprint, or any of the twelve ordered floor-planning fingerprints. Floor themes now also select one locally generated ambience identity, but audio is presentation-only and never enters planning.
 
 Escape Pause and automatic focus-loss pause suspend the exact current runtime without changing carry state, the floor-entry checkpoint, statistics, or timers. Presentation settings and onboarding completion may persist locally; run seed progress, floor, health, shards, upgrades, objectives, and timers still do not. The three depth profiles remain exact, and Phase 7 adds no fourth floor or boss.
+
+## Phase 8 compatibility
+
+The stable release locks representative Phase 7 run/floor fingerprints in an immutable fixture and verifies them independently of renderer, browser capability, presentation settings, and version display. Chromium, Firefox, WebKit, and forced Canvas exercise the same three-floor rules. Phase 8 adds no floor, enemy, objective, upgrade, balance change, or persistence.

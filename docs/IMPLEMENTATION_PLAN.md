@@ -46,12 +46,14 @@ Connect generation, objectives, combat, loot, and upgrades into exactly three de
 
 ## Phase 7 — Presentation and balancing
 
-**Status: Complete — current release scope**
+**Status: Complete**
 
 Polish the complete run with original locally generated ambience/effects, safe audio lifecycle, versioned presentation settings, first-run Field Manual, true runtime-preserving Pause and focus-loss pause, fullscreen, reduced motion, shake control, high contrast, large text, enemy health bars, low-health feedback, responsive modal presentation, bounded effects, and explicit Phaser/application bundle separation. Add only one balance adjustment: an exact one-time 450 ms first-discovery enemy awakening window, without changing enemy stats, floor profiles, damage, telegraphs, deterministic plans, rewards, or run rules.
 
-## Phase 8 — Production release
+## Phase 8 — Final release hardening
 
-**Status: Deferred**
+**Status: Complete — stable v1.0.0 release**
 
-Complete cross-browser verification, final production optimization and budgets, release hardening, CI browser expansion, final versioning, and a reproducible public release build.
+Harden the unchanged complete game for release with pinned Chromium/Firefox/WebKit coverage, forced-Canvas fallback verification, graceful runtime capability and fatal-error handling, non-blocking audio boot, input/accessibility audits, E2E-only lifecycle diagnostics, deterministic soak testing, static deployment budgets, final documentation, an annotated tag, and an official GitHub Release.
+
+The eight-phase implementation plan is complete. Possible post-1.0 ideas are intentionally outside this plan and are not promises or current scope.

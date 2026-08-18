@@ -201,7 +201,10 @@ check(applicationFiles.length >= 1, "application JavaScript is separate from Pha
 const applicationBytes = (
   await Promise.all(applicationFiles.map(async (file) => (await stat(file)).size))
 ).reduce((total, size) => total + size, 0);
-check(applicationBytes < 350_000, "application-owned minified JavaScript is below 350 kB");
+check(
+  applicationBytes <= 300_000,
+  "application-owned minified JavaScript is at most 300,000 bytes",
+);
 const javascriptReports = await Promise.all(
   javascriptFiles.map(async (file) => {
     const content = await readFile(file);
@@ -215,10 +218,36 @@ const javascriptReports = await Promise.all(
 javascriptReports.forEach(({ file, bytes, gzipBytes }) => {
   console.log(`SIZE  ${file}: ${bytes} bytes (${gzipBytes} gzip)`);
 });
+const vendorBytes = javascriptReports
+  .filter(({ file }) => path.basename(file).startsWith("phaser-vendor-"))
+  .reduce((sum, item) => sum + item.bytes, 0);
+const totalGzipBytes = javascriptReports.reduce((sum, item) => sum + item.gzipBytes, 0);
+const totalSiteBytes = (
+  await Promise.all(files.map(async (file) => (await stat(file)).size))
+).reduce((sum, size) => sum + size, 0);
+const largestNonAudio = (
+  await Promise.all(
+    files
+      .filter((file) => !file.includes(`${path.sep}audio${path.sep}`))
+      .map(async (file) => ({ file, bytes: (await stat(file)).size })),
+  )
+).sort((left, right) => right.bytes - left.bytes)[0];
+check(vendorBytes <= 1_450_000, "Phaser vendor JavaScript is at most 1,450,000 bytes");
+check(totalGzipBytes <= 450_000, "combined gzip JavaScript is at most 450,000 bytes");
+check(totalSiteBytes <= 6_500_000, "total deployed site is at most 6,500,000 bytes");
+check(
+  Boolean(largestNonAudio && largestNonAudio.bytes <= 1_500_000),
+  "largest non-audio asset is at most 1,500,000 bytes",
+);
 console.log(
   `SIZE  JavaScript total: ${javascriptReports.reduce((sum, item) => sum + item.bytes, 0)} bytes (${javascriptReports.reduce((sum, item) => sum + item.gzipBytes, 0)} gzip)`,
 );
 console.log(`SIZE  Audio total: ${deployedAudioBytes} bytes`);
+console.log(`SIZE  Deployed site total: ${totalSiteBytes} bytes`);
+if (largestNonAudio)
+  console.log(
+    `SIZE  Largest non-audio asset: ${path.relative(distDirectory, largestNonAudio.file)} (${largestNonAudio.bytes} bytes)`,
+  );
 
 for (const identifier of [
   "__DUNGEON_ESCAPE_E2E__",
@@ -229,6 +258,10 @@ for (const identifier of [
   "teleportToChest",
   "teleportToForge",
   "teleportToPickup",
+  "VITE_E2E_RENDERER",
+  "__renderer_fatal",
+  "collectLifecycleDiagnostics",
+  "LifecycleDiagnostics",
 ]) {
   check(!textContent.includes(identifier), `${identifier} is absent`);
 }

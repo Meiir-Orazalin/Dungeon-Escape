@@ -134,6 +134,11 @@ body::before {
   box-shadow: 0 0 12px rgba(232, 171, 84, 0.72);
 }
 
+.phase-badge strong {
+  color: #9aaba9;
+  font: inherit;
+}
+
 .game-frame {
   position: relative;
   display: grid;
@@ -162,6 +167,50 @@ body::before {
   display: block;
   max-width: 100%;
   max-height: 100%;
+}
+
+.fatal-error {
+  display: grid;
+  align-content: center;
+  width: 100%;
+  height: 100%;
+  padding: clamp(24px, 7vw, 72px);
+  color: #eef0e7;
+  background: #0b1013;
+  text-align: center;
+}
+
+.fatal-error h2 {
+  margin: 0 0 18px;
+  color: #ffd699;
+  font:
+    700 clamp(1.15rem, 4vw, 2rem) Georgia,
+    serif;
+}
+
+.fatal-error p {
+  max-width: 640px;
+  margin: 5px auto;
+  color: #c7d0ce;
+  line-height: 1.5;
+}
+
+.fatal-error button {
+  justify-self: center;
+  margin: 20px 0 10px;
+  padding: 11px 22px;
+  border: 2px solid #e0b56f;
+  color: #fff3d7;
+  background: #172124;
+  font:
+    700 0.85rem Arial,
+    sans-serif;
+  cursor: pointer;
+}
+
+.fatal-error__version {
+  color: #849392 !important;
+  font-size: 0.75rem;
 }
 
 .frame-corner {

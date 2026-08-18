@@ -1,5 +1,7 @@
 # Audio System
 
+> Phase 8 integration: the existing 22-file, 1,892,860-byte generated set is unchanged. WAV loading begins non-blockingly after the menu renders, decode/request failures preserve silent playability, and the release/live browser matrices verify the contract. The one-ambience, ten-SFX, pause/visibility, format, ownership, and size rules remain intact.
+
 ## Original generated-audio policy
 
 All Dungeon Escape audio is original, repository-owned, and synthesized by `scripts/generate-audio-assets.mjs`. The generator uses only built-in Node modules, stable hashes, deterministic oscillator/noise functions, finite envelopes, and clamped PCM conversion. It uses no sample, recording, spoken word, external tool, FFmpeg, system synthesizer, downloaded asset, recognizable melody, or third-party audio package.

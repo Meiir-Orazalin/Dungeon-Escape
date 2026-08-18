@@ -18,7 +18,7 @@ jobs:
   deploy:
     name: Verify and deploy
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 60
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -36,16 +36,27 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run non-browser quality gates
-        run: pnpm check
+      - name: Run final release quality gates
+        env:
+          VITE_BUILD_SHA: ${{ github.sha }}
+        run: pnpm check:release
 
-      - name: Install Chromium and system dependencies
+      - name: Install Chromium, Firefox, WebKit, and system dependencies
         env:
           PLAYWRIGHT_BROWSERS_PATH: .playwright-browsers
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm test:e2e:install:all
 
-      - name: Run local browser tests
+      - name: Run deep Chromium tests
         run: pnpm test:e2e
+
+      - name: Run core browser release matrix
+        run: pnpm test:e2e:release
+
+      - name: Run Canvas fallback tests
+        run: pnpm test:e2e:canvas
+
+      - name: Run lifecycle soak
+        run: pnpm test:soak
 
       - name: Audit production artifact
         run: pnpm audit:production
@@ -63,13 +74,13 @@ jobs:
         uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5
 
   live-smoke:
-    name: Live production smoke
+    name: Live production browser matrix
     if: ${{ vars.PRODUCTION_DOMAIN_READY == 'true' }}
     needs: deploy
     permissions:
       contents: read
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -84,12 +95,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Install Chromium and system dependencies
+      - name: Install Chromium, Firefox, WebKit, and system dependencies
         env:
           PLAYWRIGHT_BROWSERS_PATH: .playwright-browsers
-        run: pnpm exec playwright install --with-deps chromium
+        run: pnpm test:e2e:install:all
 
-      - name: Run live production smoke tests
+      - name: Run live production browser matrix
         env:
           LIVE_BASE_URL: ${{ vars.PRODUCTION_URL }}
-        run: pnpm test:live
+        run: pnpm test:live:matrix

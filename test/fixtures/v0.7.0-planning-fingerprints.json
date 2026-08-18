@@ -1,0 +1,156 @@
+{
+  "contractVersion": 1,
+  "sourceRelease": "v0.7.0",
+  "cases": [
+    {
+      "runSeed": "final-release-alpha",
+      "runFingerprint": "rn-5ec67b1f",
+      "floors": [
+        {
+          "floorNumber": 1,
+          "floorSeed": "final-release-alpha",
+          "layoutFingerprint": "dg-ec0c268d",
+          "objectiveFingerprint": "eo-e954a4dd",
+          "encounterFingerprint": "ec-a8801e10",
+          "lootFingerprint": "lt-6077d629"
+        },
+        {
+          "floorNumber": 2,
+          "floorSeed": "f2-39fac04e-final-release-alpha",
+          "layoutFingerprint": "dg-e0c38664",
+          "objectiveFingerprint": "eo-43ba51ba",
+          "encounterFingerprint": "ec-0c125c77",
+          "lootFingerprint": "lt-3bbdbed4"
+        },
+        {
+          "floorNumber": 3,
+          "floorSeed": "f3-3afac1e1-final-release-alpha",
+          "layoutFingerprint": "dg-c1039d08",
+          "objectiveFingerprint": "eo-ee328fbf",
+          "encounterFingerprint": "ec-52639d83",
+          "lootFingerprint": "lt-d01833cb"
+        }
+      ]
+    },
+    {
+      "runSeed": "final-release-bravo",
+      "runFingerprint": "rn-1d59cf72",
+      "floors": [
+        {
+          "floorNumber": 1,
+          "floorSeed": "final-release-bravo",
+          "layoutFingerprint": "dg-69e37cbf",
+          "objectiveFingerprint": "eo-d61fcc30",
+          "encounterFingerprint": "ec-72c9d73e",
+          "lootFingerprint": "lt-af2d37e9"
+        },
+        {
+          "floorNumber": 2,
+          "floorSeed": "f2-66015a7e-final-release-bravo",
+          "layoutFingerprint": "dg-0ddf65a4",
+          "objectiveFingerprint": "eo-08a394a1",
+          "encounterFingerprint": "ec-5726c9a0",
+          "lootFingerprint": "lt-3b75cf26"
+        },
+        {
+          "floorNumber": 3,
+          "floorSeed": "f3-67015c11-final-release-bravo",
+          "layoutFingerprint": "dg-3b499014",
+          "objectiveFingerprint": "eo-2aa1dada",
+          "encounterFingerprint": "ec-ee3da92b",
+          "lootFingerprint": "lt-7614fe20"
+        }
+      ]
+    },
+    {
+      "runSeed": "final-release-charlie",
+      "runFingerprint": "rn-d87a5934",
+      "floors": [
+        {
+          "floorNumber": 1,
+          "floorSeed": "final-release-charlie",
+          "layoutFingerprint": "dg-f51923b3",
+          "objectiveFingerprint": "eo-1c05f751",
+          "encounterFingerprint": "ec-c89b8ef1",
+          "lootFingerprint": "lt-d60cdd7a"
+        },
+        {
+          "floorNumber": 2,
+          "floorSeed": "f2-50150b70-final-release-charlie",
+          "layoutFingerprint": "dg-0d1e3677",
+          "objectiveFingerprint": "eo-d1afdf7d",
+          "encounterFingerprint": "ec-99f83dae",
+          "lootFingerprint": "lt-e8f6940d"
+        },
+        {
+          "floorNumber": 3,
+          "floorSeed": "f3-51150d03-final-release-charlie",
+          "layoutFingerprint": "dg-f85e0f92",
+          "objectiveFingerprint": "eo-729f4204",
+          "encounterFingerprint": "ec-279716bf",
+          "lootFingerprint": "lt-fcb17cf5"
+        }
+      ]
+    },
+    {
+      "runSeed": "final-release-delta",
+      "runFingerprint": "rn-d7ed5732",
+      "floors": [
+        {
+          "floorNumber": 1,
+          "floorSeed": "final-release-delta",
+          "layoutFingerprint": "dg-f76bc1d8",
+          "objectiveFingerprint": "eo-5a8f4271",
+          "encounterFingerprint": "ec-171dc73e",
+          "lootFingerprint": "lt-51e08b04"
+        },
+        {
+          "floorNumber": 2,
+          "floorSeed": "f2-b655a8e4-final-release-delta",
+          "layoutFingerprint": "dg-fda51f68",
+          "objectiveFingerprint": "eo-ed4f293d",
+          "encounterFingerprint": "ec-f87a4c18",
+          "lootFingerprint": "lt-59b9c0a1"
+        },
+        {
+          "floorNumber": 3,
+          "floorSeed": "f3-b755aa77-final-release-delta",
+          "layoutFingerprint": "dg-44a96a1e",
+          "objectiveFingerprint": "eo-66dda2fe",
+          "encounterFingerprint": "ec-a4ab4dd3",
+          "lootFingerprint": "lt-683c058c"
+        }
+      ]
+    },
+    {
+      "runSeed": "final-release-echo",
+      "runFingerprint": "rn-a63dd16d",
+      "floors": [
+        {
+          "floorNumber": 1,
+          "floorSeed": "final-release-echo",
+          "layoutFingerprint": "dg-55e93444",
+          "objectiveFingerprint": "eo-876eb876",
+          "encounterFingerprint": "ec-a17ae2f9",
+          "lootFingerprint": "lt-0aafbe34"
+        },
+        {
+          "floorNumber": 2,
+          "floorSeed": "f2-ed324aff-final-release-echo",
+          "layoutFingerprint": "dg-f56c1bda",
+          "objectiveFingerprint": "eo-229745f8",
+          "encounterFingerprint": "ec-17e7c48d",
+          "lootFingerprint": "lt-801e138e"
+        },
+        {
+          "floorNumber": 3,
+          "floorSeed": "f3-ec32496c-final-release-echo",
+          "layoutFingerprint": "dg-3bd3410d",
+          "objectiveFingerprint": "eo-02f51079",
+          "encounterFingerprint": "ec-38734421",
+          "lootFingerprint": "lt-08ce5196"
+        }
+      ]
+    }
+  ]
+}

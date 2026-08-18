@@ -16,13 +16,13 @@ pnpm test:e2e
 
 `pnpm build` creates `dist`; `pnpm audit:production` audits that already-built directory without starting a server or modifying it. Vite's production `base` is explicitly `/` because the custom domain serves the game at its root. `/Dungeon-Escape/` is never a production asset base, while local development, local preview, E2E mode, and seed queries remain supported.
 
-Phase 7 keeps `chunkSizeWarningLimit: 1500` and uses Rollup chunk classification to isolate Phaser in one `phaser-vendor-*` chunk while application code remains in separate hashed chunks. Audits identify chunks by structure/prefix rather than exact hash, report every minified/gzip byte count, require application-owned JavaScript below 350 kB, reject source maps and duplicate test artifacts, and never raise the threshold to hide a warning.
+The stable release keeps `chunkSizeWarningLimit: 1500` and isolates Phaser in one `phaser-vendor-*` chunk. Final budgets are 300,000 application bytes, 1,450,000 vendor bytes, 450,000 combined gzip JavaScript bytes, 3,500,000 audio bytes, 6,500,000 deployed bytes, and 1,500,000 bytes for any single non-audio asset. Audits use structure rather than exact hashes and never raise thresholds to hide failures.
 
 Original generated PCM WAV files and `audio/audio-manifest.json` are committed static assets copied into `dist`. `pnpm audit:audio` validates source assets, and `pnpm audit:production` independently checks the deployed files, WAV headers, required identities, external-URL absence, and the 3.5 MB budget. Production uses no audio CDN.
 
 ## GitHub Actions
 
-The **Quality** workflow uses read-only repository access and runs the frozen install plus `pnpm check` for pushes to `main` and pull requests.
+The **Quality** workflow uses read-only repository access and runs the frozen install plus `pnpm check:release` for pushes to `main` and pull requests.
 
 The **Deploy Production** workflow uses only:
 
@@ -32,7 +32,7 @@ pages: write
 id-token: write
 ```
 
-Its deployment job checks out the exact commit, sets up pnpm 11.16 and Node 24, installs frozen dependencies, runs non-browser checks, installs Chromium with Linux dependencies, runs all local E2E tests, audits `dist`, configures Pages, uploads only `dist`, and deploys to the `github-pages` environment. Its live-smoke job depends on deployment and runs only when `PRODUCTION_DOMAIN_READY == 'true'`.
+Its deployment job checks out the exact commit, performs frozen install and release checks, installs Chromium/Firefox/WebKit with Linux dependencies, then requires deep Chromium, core engine matrix, Canvas fallback, and lifecycle soak before uploading only `dist`. Its dependent live job runs the bridge-free matrix in all three engines. Tag and GitHub Release creation happen only after final deployment and live verification.
 
 Actions are pinned to immutable commits:
 
@@ -134,6 +134,10 @@ The Phase 7 suite additionally verifies the audio manifest, representative ambie
 5. Require the deployment and live smoke tests to pass.
 
 Never force-push `main`, move a published tag, delete the Pages site as a routine rollback, or remove DNS for an ordinary application regression. In a domain-security emergency, remember that disabling Pages while DNS still points at GitHub may increase takeover risk unless the account retains verified control of the domain.
+
+## Stable-release rollback
+
+The existing non-destructive rollback remains authoritative: revert the offending main commit, push normally, and require the full release gates, deployment, and live matrix. Never move a published tag. DNS, custom-domain, certificate, and Pages architecture remain unchanged.
 
 ## Intentionally deferred infrastructure
 

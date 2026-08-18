@@ -1,0 +1,22 @@
+# Stable Release Checklist
+
+- [ ] Working tree clean and main synchronized with origin/main
+- [ ] Required baseline is an ancestor of HEAD
+- [ ] Historical annotated tags retain exact targets
+- [ ] Package and lockfile versions synchronized
+- [ ] Unit tests and planning compatibility pass
+- [ ] Audio regeneration is byte-stable and audio audit passes
+- [ ] Production build, production audit, and release audit pass
+- [ ] Deep Chromium E2E passes
+- [ ] Chromium/Firefox/WebKit core matrix passes
+- [ ] Forced-Canvas fallback suite passes
+- [ ] Deterministic lifecycle soak passes
+- [ ] Local visual/accessibility review passes
+- [ ] Quality and gated Deploy Production workflows pass
+- [ ] Bridge-free Chromium/Firefox/WebKit live matrix passes
+- [ ] Canonical metadata, HTTPS, HTTP redirect, and www redirect pass
+- [ ] Final main is deployed before tagging
+- [ ] Annotated `v1.0.0` points at final main
+- [ ] Non-draft, non-prerelease GitHub Release uses verified notes
+- [ ] Remote main/tag/release and clean synchronization are reverified
+- [ ] Rollback remains a normal revert and verified redeployment

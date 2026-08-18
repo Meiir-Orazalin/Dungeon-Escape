@@ -1,5 +1,32 @@
 # Phase Status
 
+## v1.0.0 Phase 8 release hardening
+
+- **Version:** `1.0.0`
+- **Phase:** Phase 8 — Final Release Hardening
+- **State:** Implementation and local release verification in progress; publication remains gated on final workflows and live matrix.
+- **Canonical production URL:** `https://meiirorazalin.com/`
+- **Published Phase 7 baseline:** annotated `v0.7.0` at `7dc2c37c53cf2d7fbd1b0eea0908229ad388fd8a`
+
+Phase 8 preserves every gameplay and planning contract. The five-seed Phase 7 fixture locks five run fingerprints, fifteen floor seeds, and sixty subsystem fingerprints. Production remains Phaser.AUTO with WebGL preference and Canvas fallback; audio/storage/fullscreen are optional; missing both renderers receives friendly reload guidance. Release gates add deep Chromium, focused Chromium/Firefox/WebKit, forced Canvas, deterministic soak, contrast, production-budget, release-audit, and bridge-free live-matrix evidence.
+
+Final budgets are 300,000 application JavaScript bytes, 1,450,000 Phaser vendor bytes, 450,000 combined gzip JavaScript bytes, 3,500,000 audio bytes, 6,500,000 deployed bytes, and 1,500,000 bytes for a single non-audio asset. Runtime limits remain ten SFX voices, one ambience, and 96 normal/48 reduced-motion transient effects.
+
+The exact implementation/fix/verification SHAs, test counts, byte reports, soak duration, workflow runs, visual review, known limitations, and GitHub Release intent will be recorded only after those checks produce command evidence.
+
+Historical published targets remain:
+
+- `v0.7.0` → `7dc2c37c53cf2d7fbd1b0eea0908229ad388fd8a`
+- `v0.6.0` → `97b15629875c5ae664fe49e988eafbbf0a60518e`
+- `v0.5.0` → `944780aee6c2c592ccbfc6855126a41d47d0a561`
+- `v0.4.1` → `fdeea817472b3a8c5db41b2d331373a3a97ebe33`
+- `v0.4.0` → `b7dd859e6b2106e5f17066d38d55f5bba2514529`
+- `v0.3.0` → `bb29079df58b32645278e0843f6cd6ed2966b46e`
+- `v0.2.0` → `8f704df17d79cadb26b6e17834075814f1dd11ee`
+- `v0.1.0` → `819765fd0d5b80c1c3f083700f0f82112deecc`
+
+---
+
 ## Current release candidate
 
 - **Version:** `v0.7.0`

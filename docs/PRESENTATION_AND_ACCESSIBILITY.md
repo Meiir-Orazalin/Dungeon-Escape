@@ -1,5 +1,7 @@
 # Presentation and Accessibility
 
+> Phase 8 integration: the Phase 7 Settings schema, persistence boundaries, Pause semantics, and accessibility preferences are unchanged. Phase 8 verifies them in Chromium, Firefox, WebKit, and Canvas fallback, adds pure contrast checks and friendly fatal boot presentation, and adds no preference or gameplay persistence.
+
 ## Phase 7 overview
 
 Phase 7 wraps the complete deterministic three-floor game in a locally owned presentation layer. It adds onboarding, pause, settings, fullscreen, accessibility modes, enemy readability, bounded effects, and one explicit encounter-pacing adjustment. None of these systems enters `RunPlan` creation or any layout, objective, encounter, loot, or run fingerprint.

@@ -1,7 +1,6 @@
 import Phaser from "phaser";
 
 import { AUDIO_DIRECTOR_REGISTRY_KEY, AudioDirector } from "../audio/AudioDirector";
-import { AUDIO_EFFECT_IDS, FLOOR_AMBIENCE_IDS } from "../audio/config";
 import { SCENE_KEYS, TEXTURE_KEYS } from "../constants";
 import {
   PRESENTATION_RUNTIME_REGISTRY_KEY,
@@ -11,12 +10,6 @@ import {
 export class BootScene extends Phaser.Scene {
   public constructor() {
     super(SCENE_KEYS.BOOT);
-  }
-
-  public preload(): void {
-    [...FLOOR_AMBIENCE_IDS, ...AUDIO_EFFECT_IDS].forEach((id) => {
-      this.load.audio(id, `/audio/${id}.wav`);
-    });
   }
 
   public create(): void {

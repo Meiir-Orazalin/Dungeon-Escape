@@ -532,6 +532,7 @@ test("menu manual and settings use real keyboard controls and persist presentati
   await page.keyboard.press("Escape");
   await expect(page.locator("#game-state")).toContainText("Returned to the main menu");
 
+  await page.waitForTimeout(50);
   await page.keyboard.press("s");
   await expect(page.locator("#game-state")).toContainText("Settings opened");
   await clickCanvasPoint(page, 480, 248);

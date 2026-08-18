@@ -23,9 +23,16 @@
     "test",
     "e2e",
     "e2e-live",
+    "e2e-release",
+    "e2e-canvas",
+    "e2e-soak",
     "eslint.config.js",
     "playwright.config.ts",
     "playwright.live.config.ts",
+    "playwright.release.config.ts",
+    "playwright.canvas.config.ts",
+    "playwright.soak.config.ts",
+    "playwright.live-matrix.config.ts",
     "vitest.config.ts"
   ]
 }

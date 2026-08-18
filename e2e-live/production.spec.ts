@@ -71,6 +71,7 @@ test("canonical document metadata and public assets are production-ready", async
   expect(runtimeUrl.hostname).toBe("meiirorazalin.com");
   expect(runtimeUrl.pathname).toBe("/");
   await expect(page).toHaveTitle(DOCUMENT_TITLE);
+  await expect(page.locator("#release-version")).toContainText("v1.0.0");
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", CANONICAL_URL);
   await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", DESCRIPTION);
   await expect(page.locator('meta[property="og:title"]')).toHaveAttribute(

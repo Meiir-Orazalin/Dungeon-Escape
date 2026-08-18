@@ -10,6 +10,7 @@ import { requestGameFullscreen } from "../presentation/fullscreen";
 import { FieldManualOverlay } from "../ui/FieldManualOverlay";
 import { SettingsOverlay } from "../ui/SettingsOverlay";
 import { announceGameState } from "../ui/announce";
+import { RELEASE_IDENTITY } from "../platform/version";
 
 export class MenuScene extends Phaser.Scene {
   private hasStarted = false;
@@ -32,6 +33,7 @@ export class MenuScene extends Phaser.Scene {
     this.settings = undefined;
     this.presentation = getPresentationRuntime(this);
     this.audio = getAudioDirector(this);
+    this.audio.loadNonBlocking(this);
     this.drawBackdrop();
     this.drawMenu();
     this.registerInput();
@@ -118,6 +120,15 @@ export class MenuScene extends Phaser.Scene {
       })
       .setOrigin(0.5)
       .setName("landscape-recommendation");
+    this.add
+      .text(930, 518, RELEASE_IDENTITY.label, {
+        color: "#718083",
+        fontFamily: "Arial, sans-serif",
+        fontSize: "9px",
+        fontStyle: "bold",
+      })
+      .setOrigin(1, 0.5)
+      .setName("release-version");
   }
 
   private createButton(

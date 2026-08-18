@@ -1,6 +1,6 @@
 {
   "name": "dungeon-escape",
-  "version": "0.7.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "description": "A deterministic dark fantasy dungeon combat and escape game built with Phaser and TypeScript.",
@@ -10,6 +10,7 @@
     "audio:generate": "node scripts/generate-audio-assets.mjs",
     "audit:audio": "node scripts/audit-audio.mjs",
     "audit:production": "node scripts/audit-production.mjs",
+    "audit:release": "node scripts/audit-release.mjs",
     "dev": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 127.0.0.1",
@@ -19,10 +20,16 @@
     "format:check": "prettier --check .",
     "test": "vitest",
     "test:run": "vitest run",
-    "test:e2e:install": "PLAYWRIGHT_BROWSERS_PATH=./.playwright-browsers playwright install chromium",
-    "test:e2e": "pnpm build && PLAYWRIGHT_BROWSERS_PATH=./.playwright-browsers playwright test",
-    "test:live": "PLAYWRIGHT_BROWSERS_PATH=./.playwright-browsers playwright test --config=playwright.live.config.ts",
-    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:run && pnpm audit:audio && pnpm build && pnpm audit:production"
+    "test:e2e:install": "PLAYWRIGHT_BROWSERS_PATH=${PLAYWRIGHT_BROWSERS_PATH:-./.playwright-browsers} playwright install chromium",
+    "test:e2e:install:all": "PLAYWRIGHT_BROWSERS_PATH=${PLAYWRIGHT_BROWSERS_PATH:-./.playwright-browsers} playwright install --with-deps chromium firefox webkit",
+    "test:e2e": "pnpm build && PLAYWRIGHT_BROWSERS_PATH=${PLAYWRIGHT_BROWSERS_PATH:-./.playwright-browsers} playwright test",
+    "test:e2e:release": "PLAYWRIGHT_BROWSERS_PATH=${PLAYWRIGHT_BROWSERS_PATH:-./.playwright-browsers} playwright test --config=playwright.release.config.ts",
+    "test:e2e:canvas": "PLAYWRIGHT_BROWSERS_PATH=${PLAYWRIGHT_BROWSERS_PATH:-./.playwright-browsers} playwright test --config=playwright.canvas.config.ts",
+    "test:soak": "PLAYWRIGHT_BROWSERS_PATH=${PLAYWRIGHT_BROWSERS_PATH:-./.playwright-browsers} playwright test --config=playwright.soak.config.ts",
+    "test:live": "PLAYWRIGHT_BROWSERS_PATH=${PLAYWRIGHT_BROWSERS_PATH:-./.playwright-browsers} playwright test --config=playwright.live.config.ts",
+    "test:live:matrix": "PLAYWRIGHT_BROWSERS_PATH=${PLAYWRIGHT_BROWSERS_PATH:-./.playwright-browsers} playwright test --config=playwright.live-matrix.config.ts",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:run && pnpm audit:audio && pnpm build && pnpm audit:production",
+    "check:release": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test:run && pnpm audit:audio && pnpm build && pnpm audit:production && pnpm audit:release"
   },
   "dependencies": {
     "phaser": "4.2.1"
