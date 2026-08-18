@@ -4,7 +4,7 @@ import type { Page } from "@playwright/test";
 const CANONICAL_URL = "https://meiirorazalin.com/";
 const DOCUMENT_TITLE = "Dungeon Escape — Deterministic Dark-Fantasy Action Game";
 const DESCRIPTION =
-  "Explore a shifting dungeon, fight deterministic enemies, recover the Runic Key, and escape through the Ancient Gate.";
+  "Descend through three deterministic dungeons, forge a run build, recover each Runic Key, and escape the depths.";
 
 interface Diagnostics {
   readonly pageErrors: string[];
@@ -106,7 +106,7 @@ test("fixed-seed production startup remains playable without page scrolling", as
   expect(box?.height ?? 0).toBeGreaterThan(0);
   await expect(page.locator("#game-state")).toContainText("Main menu");
   await page.keyboard.press("Enter");
-  await expect(page.locator("#game-state")).toContainText("Generated dungeon ready");
+  await expect(page.locator("#game-state")).toContainText("Three-floor run ready");
 
   const currentUrl = new URL(page.url());
   expect(currentUrl.protocol).toBe("https:");
@@ -155,8 +155,19 @@ test("production excludes test bridges, localhost resources, mixed content, and 
     target: "teleportToTarget" in window,
     nearEnemy: "teleportNearEnemy" in window,
     ontoEnemy: "teleportOntoEnemy" in window,
+    chest: "teleportToChest" in window,
+    forge: "teleportToForge" in window,
+    pickup: "teleportToPickup" in window,
   }));
-  expect(globals).toEqual({ bridge: false, target: false, nearEnemy: false, ontoEnemy: false });
+  expect(globals).toEqual({
+    bridge: false,
+    target: false,
+    nearEnemy: false,
+    ontoEnemy: false,
+    chest: false,
+    forge: false,
+    pickup: false,
+  });
 
   const resources = await page.evaluate(() =>
     performance.getEntriesByType("resource").map((entry) => entry.name),
