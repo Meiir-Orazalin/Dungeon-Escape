@@ -19,6 +19,7 @@ export class DungeonMinimap {
   private readonly mapHeight: number;
   private readonly offsetX = 12;
   private readonly offsetY = 27;
+  private highContrast = false;
 
   public constructor(
     scene: Phaser.Scene,
@@ -27,7 +28,9 @@ export class DungeonMinimap {
     private readonly encounterPlan: EncounterPlan,
     private readonly lootPlan: LootPlan,
     private readonly theme: FloorTheme = getFloorTheme(1),
+    highContrast = false,
   ) {
+    this.highContrast = highContrast;
     this.mapHeight = (this.mapWidth * layout.mapHeight) / layout.mapWidth;
     const container = scene.add
       .container(GAME_WIDTH - this.mapWidth - 38, 20)
@@ -36,7 +39,7 @@ export class DungeonMinimap {
     const plate = scene.add
       .rectangle(0, 0, this.mapWidth + 24, this.mapHeight + 39, 0x080b0d, 0.86)
       .setOrigin(0)
-      .setStrokeStyle(1, 0x718082, 0.34);
+      .setStrokeStyle(highContrast ? 2 : 1, 0x718082, highContrast ? 0.8 : 0.34);
     const label = scene.add.text(12, 9, "DISCOVERED PATHS", {
       color: "#899597",
       fontFamily: "Arial, sans-serif",
@@ -48,12 +51,17 @@ export class DungeonMinimap {
     container.add([plate, label, this.graphics]);
   }
 
+  public setHighContrast(highContrast: boolean): void {
+    this.highContrast = highContrast;
+  }
+
   public update(
     discovery: RoomDiscoveryState,
     objectiveState: EscapeObjectiveState,
     aliveEnemyIds: ReadonlySet<string>,
     rewardState: RunRewardState,
   ): void {
+    const thin = this.highContrast ? 2 : 1;
     const scaleX = this.mapWidth / this.layout.mapWidth;
     const scaleY = this.mapHeight / this.layout.mapHeight;
     const point = (tile: TilePoint): TilePoint => ({
@@ -78,7 +86,7 @@ export class DungeonMinimap {
         TilePoint,
         TilePoint,
       ];
-      this.graphics.lineStyle(3, 0x697678, 0.68);
+      this.graphics.lineStyle(this.highContrast ? 4 : 3, 0x697678, 0.68);
       this.graphics.beginPath();
       this.graphics.moveTo(start.x, start.y);
       this.graphics.lineTo(bend.x, bend.y);
@@ -99,7 +107,7 @@ export class DungeonMinimap {
         Math.max(3, room.width * scaleX),
         Math.max(3, room.height * scaleY),
       );
-      this.graphics.lineStyle(1, isCurrent ? 0xf2d399 : 0x899496, 0.75);
+      this.graphics.lineStyle(thin, isCurrent ? 0xf2d399 : 0x899496, 0.9);
       this.graphics.strokeRect(
         this.offsetX + room.x * scaleX,
         this.offsetY + room.y * scaleY,
@@ -116,7 +124,7 @@ export class DungeonMinimap {
       });
       this.graphics.fillStyle(0xf4c96e, 1);
       this.graphics.fillCircle(key.x, key.y, 3.4);
-      this.graphics.lineStyle(1, 0xffecae, 0.95);
+      this.graphics.lineStyle(thin, 0xffecae, 0.95);
       this.graphics.strokeCircle(key.x, key.y, 5.2);
     }
     if (markerState.gate !== "hidden") {
@@ -125,7 +133,7 @@ export class DungeonMinimap {
         y: this.objectivePlan.gatePosition.tileY,
       });
       const ready = markerState.gate === "ready";
-      this.graphics.lineStyle(2, ready ? 0x8ce0c8 : 0xc35b55, 1);
+      this.graphics.lineStyle(this.highContrast ? 3 : 2, ready ? 0x8ce0c8 : 0xc35b55, 1);
       this.graphics.strokeCircle(gate.x, gate.y, 5.2);
       this.graphics.fillStyle(ready ? 0x8ce0c8 : 0x7b3330, ready ? 0.9 : 0.76);
       this.graphics.fillCircle(gate.x, gate.y, 2.2);
@@ -144,7 +152,7 @@ export class DungeonMinimap {
         threat.x,
         threat.y - 3.5,
       );
-      this.graphics.lineStyle(1, 0xffb097, 0.9);
+      this.graphics.lineStyle(thin, 0xffb097, 0.9);
       this.graphics.strokeTriangle(
         threat.x - 3.5,
         threat.y + 4.5,
@@ -173,7 +181,7 @@ export class DungeonMinimap {
       const marker = point({ x: chest.position.tileX, y: chest.position.tileY });
       this.graphics.fillStyle(0xd6a45b, 0.98);
       this.graphics.fillRect(marker.x - 3.5, marker.y - 2.5, 7, 5);
-      this.graphics.lineStyle(1, 0xffd786, 0.9);
+      this.graphics.lineStyle(thin, 0xffd786, 0.9);
       this.graphics.strokeRect(marker.x - 3.5, marker.y - 2.5, 7, 5);
     });
     const forge = point({
@@ -186,7 +194,7 @@ export class DungeonMinimap {
         : lootMarkers.forge === "exhausted"
           ? 0x657173
           : 0x9c7544;
-    this.graphics.lineStyle(1.5, forgeColor, 1);
+    this.graphics.lineStyle(this.highContrast ? 3 : 1.5, forgeColor, 1);
     this.graphics.strokeCircle(forge.x, forge.y, 4.2);
     this.graphics.fillStyle(forgeColor, lootMarkers.forge === "exhausted" ? 0.45 : 0.9);
     this.graphics.fillCircle(forge.x, forge.y, 1.8);

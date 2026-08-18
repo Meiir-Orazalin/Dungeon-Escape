@@ -36,6 +36,7 @@ interface LootManagerCallbacks {
   readonly stateChanged: (state: RunRewardState, becameReady: boolean) => void;
   readonly chestOpened: (chestId: string) => void;
   readonly healed: (vitality: PlayerVitality, restoredHealth: number) => void;
+  readonly shardCollected?: (amount: number) => void;
   readonly healPlayer: (
     amount: number,
   ) => Readonly<{ consumed: boolean; restoredHealth: number; vitality: PlayerVitality }>;
@@ -335,6 +336,7 @@ export class LootManager {
     this.armedPickupIds.delete(pickup.id);
     this.createCollectionEffect(pickup.object.x, pickup.object.y, 0x78e5d4);
     pickup.object.destroy();
+    this.callbacks.shardCollected?.(pickup.amount);
     this.notifyStateChanged(!wasReady && this.getForgeMarkerState() === "ready");
   }
 

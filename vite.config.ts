@@ -1,5 +1,7 @@
 import { defineConfig } from "vite";
 
+import { classifyProductionChunk } from "./src/game/presentation/performance.ts";
+
 export default defineConfig({
   base: "/",
   server: {
@@ -15,5 +17,10 @@ export default defineConfig({
   build: {
     target: "es2022",
     chunkSizeWarningLimit: 1_500,
+    rollupOptions: {
+      output: {
+        manualChunks: classifyProductionChunk,
+      },
+    },
   },
 });

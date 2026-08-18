@@ -40,18 +40,18 @@ Add three deterministic Treasure Chests, stable enemy reward assignments, Runic 
 
 ## Phase 6 — Complete three-floor run
 
-**Status: Complete — current release scope**
+**Status: Complete**
 
 Connect generation, objectives, combat, loot, and upgrades into exactly three deterministic floors: The Shifting Catacombs, Ember Vaults, and Obsidian Sanctum. Add versioned floor-seed derivation, a validated `RunPlan` and run fingerprint, floor themes, exact depth difficulty profiles, Floor Cleared transitions, health/shard/upgrade carry, one-point transition healing, floor-entry checkpoint replay, cumulative statistics, run victory, and whole-run defeat. Expand the catalog to eight upgrades while retaining three-card offers, two purchases per floor, and a six-purchase run maximum.
 
 ## Phase 7 — Presentation and balancing
 
-**Status: Deferred**
+**Status: Complete — current release scope**
 
-Refine visual feedback, audio, onboarding, accessibility, performance, encounter pacing, difficulty, rewards, and responsive behaviour. Replace temporary presentation only where the replacement is original and locally owned.
+Polish the complete run with original locally generated ambience/effects, safe audio lifecycle, versioned presentation settings, first-run Field Manual, true runtime-preserving Pause and focus-loss pause, fullscreen, reduced motion, shake control, high contrast, large text, enemy health bars, low-health feedback, responsive modal presentation, bounded effects, and explicit Phaser/application bundle separation. Add only one balance adjustment: an exact one-time 450 ms first-discovery enemy awakening window, without changing enemy stats, floor profiles, damage, telegraphs, deterministic plans, rewards, or run rules.
 
 ## Phase 8 — Production release
 
 **Status: Deferred**
 
-Complete cross-browser verification, production optimization, deployment configuration, release documentation, CI browser coverage, final versioning, and a reproducible public release build.
+Complete cross-browser verification, final production optimization and budgets, release hardening, CI browser expansion, final versioning, and a reproducible public release build.

@@ -25,6 +25,10 @@ interface EnemySummary {
   readonly maximumHealth: number;
   readonly alive: boolean;
   readonly state: string;
+  readonly discovered: boolean;
+  readonly awakening: boolean;
+  readonly awakeningRemainingMs: number;
+  readonly awakeningConsumed: boolean;
 }
 
 interface ChestSummary {
@@ -167,6 +171,41 @@ interface E2ESnapshot {
     }>;
   }> | null;
   readonly completedFloorSummaries: readonly Readonly<{ floorNumber: number }>[];
+  readonly presentationSettings: Readonly<{
+    masterVolume: number;
+    ambienceVolume: number;
+    effectsVolume: number;
+    muted: boolean;
+    reducedMotion: boolean;
+    screenShake: boolean;
+    highContrast: boolean;
+    largeText: boolean;
+  }> | null;
+  readonly effectiveReducedMotion: boolean | null;
+  readonly effectiveScreenShake: boolean | null;
+  readonly highContrast: boolean | null;
+  readonly largeText: boolean | null;
+  readonly presentationModalKind: "none" | "pause" | "manual" | "settings" | null;
+  readonly pauseOverlayVisible: boolean | null;
+  readonly settingsOverlayVisible: boolean | null;
+  readonly fieldManualVisible: boolean | null;
+  readonly firstRunOnboardingActive: boolean | null;
+  readonly onboardingComplete: boolean | null;
+  readonly simulationPaused: boolean | null;
+  readonly physicsPaused: boolean | null;
+  readonly floorTimerPaused: boolean | null;
+  readonly runTimerPaused: boolean | null;
+  readonly audioSupported: boolean | null;
+  readonly audioUnlocked: boolean | null;
+  readonly audioMuted: boolean | null;
+  readonly currentAmbienceId: string | null;
+  readonly activeAmbienceCount: number | null;
+  readonly activeEffectVoiceCount: number | null;
+  readonly peakEffectVoiceCount: number | null;
+  readonly activeTransientEffectCount: number | null;
+  readonly peakTransientEffectCount: number | null;
+  readonly lowHealthPresentationVisible: boolean | null;
+  readonly enemyHealthBarVisibleCount: number | null;
 }
 
 interface TestWindow extends Window {
@@ -214,6 +253,13 @@ async function teleportNearEnemy(page: Page, enemyId: string): Promise<void> {
 }
 
 async function teleportOntoEnemy(page: Page, enemyId: string): Promise<void> {
+  const before = enemyById(await getSnapshot(page), enemyId);
+  if (!before.awakeningConsumed) {
+    await teleportNearEnemy(page, enemyId);
+    await expect
+      .poll(async () => enemyById(await getSnapshot(page), enemyId).awakening)
+      .toBe(false);
+  }
   await page.evaluate((id) => {
     const bridge = (window as TestWindow).__DUNGEON_ESCAPE_E2E__;
     if (!bridge) throw new Error("The E2E bridge is unavailable.");
@@ -347,6 +393,9 @@ async function continueToNextFloor(page: Page): Promise<E2ESnapshot> {
 }
 
 async function openMenu(page: Page, seed = FIXED_SEED): Promise<void> {
+  await page.addInitScript(() => {
+    window.localStorage.setItem("dungeon-escape.onboarding.v1", "complete");
+  });
   await page.goto(`/?seed=${encodeURIComponent(seed)}`);
   await page.waitForFunction(() => Boolean((window as TestWindow).__DUNGEON_ESCAPE_E2E__));
   await waitForScene(page, "MenuScene");
@@ -363,7 +412,7 @@ async function clickCanvasPoint(page: Page, logicalX: number, logicalY: number):
 }
 
 async function startWithPointer(page: Page): Promise<void> {
-  await clickCanvasPoint(page, GAME_WIDTH / 2, 318);
+  await clickCanvasPoint(page, GAME_WIDTH / 2, 240);
   await waitForScene(page, "GameScene");
 }
 
@@ -443,6 +492,130 @@ function findNearestWallApproach(layout: DungeonLayout): WallApproach {
     })
     .sort((left, right) => left.travelDistance - right.travelDistance)[0] as WallApproach;
 }
+
+test("first-run onboarding freezes the run, completes through real controls, and stays complete", async ({
+  page,
+}) => {
+  await page.goto("/?seed=phase7-onboarding");
+  await page.waitForFunction(() => Boolean((window as TestWindow).__DUNGEON_ESCAPE_E2E__));
+  await waitForScene(page, "MenuScene");
+  await page.keyboard.press("Enter");
+  await waitForScene(page, "GameScene");
+  const onboarding = await getSnapshot(page);
+  expect(onboarding.firstRunOnboardingActive).toBe(true);
+  expect(onboarding.fieldManualVisible).toBe(true);
+  expect(onboarding.presentationModalKind).toBe("manual");
+  expect(onboarding.floorTimeMs).toBe(0);
+  expect(onboarding.runTimeMs).toBe(0);
+  expect(onboarding.movementEnabled).toBe(false);
+
+  for (let section = 0; section < 4; section += 1) await page.keyboard.press("Enter");
+  await expect.poll(async () => (await getSnapshot(page)).presentationModalKind).toBe("none");
+  expect((await getSnapshot(page)).onboardingComplete).toBe(true);
+  await expect.poll(async () => (await getSnapshot(page)).floorTimeMs ?? 0).toBeGreaterThan(0);
+
+  await page.reload();
+  await page.waitForFunction(() => Boolean((window as TestWindow).__DUNGEON_ESCAPE_E2E__));
+  await waitForScene(page, "MenuScene");
+  await page.keyboard.press("Enter");
+  await waitForScene(page, "GameScene");
+  expect((await getSnapshot(page)).firstRunOnboardingActive).toBe(false);
+});
+
+test("menu manual and settings use real keyboard controls and persist presentation only", async ({
+  page,
+}) => {
+  await openMenu(page, "phase7-menu-presentation");
+  await page.keyboard.press("h");
+  await expect(page.locator("#game-state")).toContainText("Field Manual opened");
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#game-state")).toContainText("Returned to the main menu");
+
+  await page.keyboard.press("s");
+  await expect(page.locator("#game-state")).toContainText("Settings opened");
+  await clickCanvasPoint(page, 480, 248);
+  expect(
+    await page.evaluate(() =>
+      JSON.parse(window.localStorage.getItem("dungeon-escape.presentation.v1") ?? "{}"),
+    ),
+  ).toMatchObject({ reducedMotion: true });
+  await page.keyboard.press("Escape");
+  await startWithKey(page);
+  expect((await getSnapshot(page)).effectiveReducedMotion).toBe(true);
+  expect((await getSnapshot(page)).effectiveScreenShake).toBe(false);
+});
+
+test("pause and focus loss freeze exact runtime until explicit resume", async ({ page }) => {
+  await openMenu(page, "phase7-pause-runtime");
+  await startWithKey(page);
+  await expect.poll(async () => (await getSnapshot(page)).floorTimeMs ?? 0).toBeGreaterThan(80);
+  await page.keyboard.down("ArrowRight");
+  await page.waitForTimeout(80);
+  await page.keyboard.up("ArrowRight");
+  await page.keyboard.press("Escape");
+  await expect.poll(async () => (await getSnapshot(page)).pauseOverlayVisible).toBe(true);
+  const paused = await getSnapshot(page);
+  expect(paused.simulationPaused).toBe(true);
+  expect(paused.physicsPaused).toBe(true);
+  await page.waitForTimeout(180);
+  const held = await getSnapshot(page);
+  expect(held.playerPosition).toEqual(paused.playerPosition);
+  expect(held.floorTimeMs).toBe(paused.floorTimeMs);
+  expect(held.runTimeMs).toBe(paused.runTimeMs);
+  await page.keyboard.press("Escape");
+  await expect.poll(async () => (await getSnapshot(page)).presentationModalKind).toBe("none");
+  await expect
+    .poll(async () => (await getSnapshot(page)).floorTimeMs ?? 0)
+    .toBeGreaterThan(paused.floorTimeMs ?? 0);
+
+  await page.evaluate(() => window.dispatchEvent(new Event("blur")));
+  await expect.poll(async () => (await getSnapshot(page)).pauseOverlayVisible).toBe(true);
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await page.waitForTimeout(80);
+  expect((await getSnapshot(page)).pauseOverlayVisible).toBe(true);
+});
+
+test("mute persists and audio state keeps one floor ambience after gesture", async ({ page }) => {
+  await openMenu(page, "phase7-audio-state");
+  await startWithKey(page);
+  await expect
+    .poll(async () => (await getSnapshot(page)).currentAmbienceId)
+    .toBe("ambience-catacombs");
+  expect((await getSnapshot(page)).activeAmbienceCount).toBeLessThanOrEqual(1);
+  await page.keyboard.press("m");
+  await expect.poll(async () => (await getSnapshot(page)).audioMuted).toBe(true);
+  await page.reload();
+  await page.waitForFunction(() => Boolean((window as TestWindow).__DUNGEON_ESCAPE_E2E__));
+  await waitForScene(page, "MenuScene");
+  await page.keyboard.press("Enter");
+  await waitForScene(page, "GameScene");
+  expect((await getSnapshot(page)).audioMuted).toBe(true);
+});
+
+test("real enemy discovery grants one bounded awakening window and health-bar presentation", async ({
+  page,
+}) => {
+  await openMenu(page, "phase7-awakening");
+  await startWithKey(page);
+  const target = (await getSnapshot(page)).enemies[0];
+  if (!target) throw new Error("Expected an enemy for awakening coverage.");
+  await teleportNearEnemy(page, target.id);
+  await expect.poll(async () => enemyById(await getSnapshot(page), target.id).awakening).toBe(true);
+  const awakening = enemyById(await getSnapshot(page), target.id);
+  const stationary = awakening.position;
+  expect(awakening.awakeningRemainingMs).toBeGreaterThan(0);
+  expect((await getSnapshot(page)).enemyHealthBarVisibleCount).toBeGreaterThan(0);
+  await page.waitForTimeout(160);
+  expect(enemyById(await getSnapshot(page), target.id).position).toEqual(stationary);
+  await expect
+    .poll(async () => enemyById(await getSnapshot(page), target.id).awakening)
+    .toBe(false);
+  expect(enemyById(await getSnapshot(page), target.id).awakeningConsumed).toBe(true);
+  await teleportToTarget(page, "spawn");
+  await teleportNearEnemy(page, target.id);
+  expect(enemyById(await getSnapshot(page), target.id).awakening).toBe(false);
+});
 
 test("generated objective preserves movement, collision, minimap start, timer, and resize", async ({
   page,
@@ -856,8 +1029,13 @@ test("Ash Wisp telegraph creates bounded projectiles that damage and expire", as
   const wisp = enemyByArchetype(await getSnapshot(page), "ash-wisp");
   const startingHealth = (await getSnapshot(page)).playerHealth ?? 0;
   await teleportNearEnemy(page, wisp.id);
+  await expect.poll(async () => enemyById(await getSnapshot(page), wisp.id).awakening).toBe(false);
+  await teleportNearEnemy(page, wisp.id);
   await expect
-    .poll(async () => enemyById(await getSnapshot(page), wisp.id).state)
+    .poll(async () => enemyById(await getSnapshot(page), wisp.id).state, {
+      timeout: 8_000,
+      intervals: [20],
+    })
     .toBe("telegraph");
   await expect
     .poll(async () => (await getSnapshot(page)).activeEnemyProjectileCount, {
@@ -879,8 +1057,13 @@ test("a dodged Ash projectile is destroyed by room geometry before unbounded acc
   await startWithKey(page);
   const wisp = enemyByArchetype(await getSnapshot(page), "ash-wisp");
   await teleportNearEnemy(page, wisp.id);
+  await expect.poll(async () => enemyById(await getSnapshot(page), wisp.id).awakening).toBe(false);
+  await teleportNearEnemy(page, wisp.id);
   await expect
-    .poll(async () => enemyById(await getSnapshot(page), wisp.id).state)
+    .poll(async () => enemyById(await getSnapshot(page), wisp.id).state, {
+      timeout: 8_000,
+      intervals: [20],
+    })
     .toBe("telegraph");
   await page.keyboard.down("ArrowDown");
   await expect

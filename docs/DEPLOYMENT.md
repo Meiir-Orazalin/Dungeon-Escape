@@ -16,6 +16,10 @@ pnpm test:e2e
 
 `pnpm build` creates `dist`; `pnpm audit:production` audits that already-built directory without starting a server or modifying it. Vite's production `base` is explicitly `/` because the custom domain serves the game at its root. `/Dungeon-Escape/` is never a production asset base, while local development, local preview, E2E mode, and seed queries remain supported.
 
+Phase 7 keeps `chunkSizeWarningLimit: 1500` and uses Rollup chunk classification to isolate Phaser in one `phaser-vendor-*` chunk while application code remains in separate hashed chunks. Audits identify chunks by structure/prefix rather than exact hash, report every minified/gzip byte count, require application-owned JavaScript below 350 kB, reject source maps and duplicate test artifacts, and never raise the threshold to hide a warning.
+
+Original generated PCM WAV files and `audio/audio-manifest.json` are committed static assets copied into `dist`. `pnpm audit:audio` validates source assets, and `pnpm audit:production` independently checks the deployed files, WAV headers, required identities, external-URL absence, and the 3.5 MB budget. Production uses no audio CDN.
+
 ## GitHub Actions
 
 The **Quality** workflow uses read-only repository access and runs the frozen install plus `pnpm check` for pushes to `main` and pull requests.
@@ -109,6 +113,8 @@ LIVE_BASE_URL=https://meiirorazalin.com pnpm test:live
 ```
 
 It verifies metadata/assets, a fixed-seed canvas startup, HTTP-to-HTTPS behavior, the `www` redirect, seed-query preservation, browser diagnostics, and production bridge isolation. Set `PRODUCTION_DOMAIN_READY=true` only after DNS, account verification, certificate approval, HTTPS, apex, and `www` all pass; then dispatch **Deploy Production** so the live-smoke job runs.
+
+The Phase 7 suite additionally verifies the audio manifest, representative ambience/effect assets, Settings and How to Play public menu copy, absence of external audio requests, and absence of autoplay-related uncaught errors. It remains bridge-free and does not perform fragile deep three-floor combat checks against production.
 
 ## Troubleshooting
 

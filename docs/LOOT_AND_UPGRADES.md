@@ -147,6 +147,10 @@ The published Phase 5 contract was deliberately one-floor: its available shards,
 
 This later carry behavior does not retroactively change v0.5.0. Loot remains optional to every key/gate objective, and no inventory or persistence was added. See [THREE_FLOOR_RUN.md](THREE_FLOOR_RUN.md).
 
-## Intentionally deferred after Phase 6
+## Phase 7 integration
 
-There is no inventory, equipment, rarity, affixes, weapon selection, crafting, vendor/shop, experience, level, skill tree, persistence, save, account, boss, trap, score, achievement, daily run, audio, pause menu, virtual control, analytics, backend, service worker, offline mode, or network system.
+Phase 7 presentation settings, Pause, onboarding, generated audio, and bounded effects wrap the existing loot/forge runtime without changing `LootPlan`, `lt-xxxxxxxx`, reward amounts, costs, upgrade effects, offers, carry, or reset semantics. Pause freezes pickups and the exact Runeforge/world state. Reduced motion removes nonessential pickup/forge motion but never changes proximity, collection, healing, or affordability. Chest, shard, flask, forge-ready, and upgrade transitions route accepted events to local audio; ignored/duplicate transitions remain silent.
+
+## Intentionally deferred after Phase 7
+
+There is no inventory, equipment, rarity, affixes, weapon selection, crafting, vendor/shop, experience, level, skill tree, run persistence, save, account, boss, trap, score, achievement, daily run, virtual control, controller support, analytics, backend, service worker, offline mode, or network system.

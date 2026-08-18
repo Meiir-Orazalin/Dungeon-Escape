@@ -2,6 +2,7 @@ import Phaser from "phaser";
 
 import { GAME_HEIGHT, GAME_WIDTH } from "../constants";
 import { LOOT_GAME_OBJECT_NAMES } from "../loot/config";
+import type { PresentationSettings } from "../presentation/settings";
 import { getUpgrade } from "../upgrades/catalog";
 import type { UpgradeId, UpgradeOffer } from "../upgrades/types";
 
@@ -30,7 +31,10 @@ export class UpgradeChoiceOverlay {
     availableShards: number,
     cost: number,
     private readonly callbacks: UpgradeChoiceCallbacks,
+    private readonly presentation?: PresentationSettings,
   ) {
+    const scale = presentation?.largeText ? 1.12 : 1;
+    const stroke = presentation?.highContrast ? 3 : 2;
     this.container = scene.add
       .container(0, 0)
       .setName(LOOT_GAME_OBJECT_NAMES.UPGRADE_OVERLAY)
@@ -39,7 +43,7 @@ export class UpgradeChoiceOverlay {
     const veil = scene.add.rectangle(0, 0, GAME_WIDTH, GAME_HEIGHT, 0x020405, 0.76).setOrigin(0);
     const panel = scene.add
       .rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, 850, 430, 0x0a1012, 0.985)
-      .setStrokeStyle(2, 0xd19e55, 0.78);
+      .setStrokeStyle(stroke, 0xd19e55, 0.9);
     const inner = scene.add
       .rectangle(GAME_WIDTH / 2, GAME_HEIGHT / 2, 830, 410, 0x000000, 0)
       .setStrokeStyle(1, 0x70b8ad, 0.2);
@@ -47,7 +51,7 @@ export class UpgradeChoiceOverlay {
       .text(GAME_WIDTH / 2, 76, "RUNEFORGE", {
         color: "#f0cf8a",
         fontFamily: "Georgia, Times New Roman, serif",
-        fontSize: "35px",
+        fontSize: `${Math.round(35 * scale)}px`,
         fontStyle: "bold",
         letterSpacing: 4,
       })
@@ -56,7 +60,7 @@ export class UpgradeChoiceOverlay {
       .text(GAME_WIDTH / 2, 116, `RUNIC SHARDS  ·  ${availableShards}     COST  ·  ${cost}`, {
         color: "#7dd6c8",
         fontFamily: "Arial, sans-serif",
-        fontSize: "12px",
+        fontSize: `${Math.round(12 * scale)}px`,
         fontStyle: "bold",
         letterSpacing: 1.6,
       })
@@ -127,7 +131,7 @@ export class UpgradeChoiceOverlay {
     const definition = getUpgrade(id);
     const plate = this.scene.add
       .rectangle(x, 285, 245, 245, 0x121a1c, 1)
-      .setStrokeStyle(1, 0x607173, 0.7);
+      .setStrokeStyle(this.presentation?.highContrast ? 3 : 1, 0x607173, 0.85);
     const number = this.scene.add
       .text(x - 101, 178, `${index + 1}`, {
         color: "#8acdc1",
@@ -151,7 +155,7 @@ export class UpgradeChoiceOverlay {
         align: "center",
         color: "#e7c77f",
         fontFamily: "Arial, sans-serif",
-        fontSize: "14px",
+        fontSize: `${Math.round(14 * (this.presentation?.largeText ? 1.12 : 1))}px`,
         fontStyle: "bold",
         letterSpacing: 1.1,
       })
@@ -161,7 +165,7 @@ export class UpgradeChoiceOverlay {
         align: "center",
         color: "#aeb9b7",
         fontFamily: "Arial, sans-serif",
-        fontSize: "12px",
+        fontSize: `${Math.round(12 * (this.presentation?.largeText ? 1.12 : 1))}px`,
         wordWrap: { width: 205 },
       })
       .setOrigin(0.5);

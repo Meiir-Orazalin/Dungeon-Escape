@@ -164,6 +164,10 @@ Floor 1 and Floor 2 gate completion keep the run active and enter `floor-cleared
 
 Living enemies, unopened chests, uncollected shards/flasks, and an unused Runeforge never block the objective. Interaction distance/tie behavior remains unchanged. This later routing does not retroactively alter Phase 3 history.
 
-## Intentionally deferred after Phase 6
+## Phase 7 integration
 
-Boss objectives, traps, alternate exits, scores, persistence, audio, and virtual mobile movement remain later work.
+Pause and presentation modals suspend interaction without mutating objective state or timing. Key collection, blocked gate, gate readiness, and completion now route accepted transitions to original local sound effects, while every state remains visually represented. Settings and audio never enter objective planning or `eo-xxxxxxxx`; living enemies and optional loot still do not block the gate.
+
+## Intentionally deferred after Phase 7
+
+Boss objectives, traps, alternate exits, scores, run persistence, and virtual mobile movement remain later work.

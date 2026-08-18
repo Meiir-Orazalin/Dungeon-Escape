@@ -36,6 +36,11 @@ import {
 interface CombatCallbacks {
   readonly healthChanged: (vitality: PlayerVitality) => void;
   readonly playerDefeated: () => void;
+  readonly attackStarted?: () => void;
+  readonly dashStarted?: () => void;
+  readonly playerHit?: () => void;
+  readonly screenShakeEnabled?: () => boolean;
+  readonly reducedMotion?: () => boolean;
 }
 
 interface CombatInitialState {
@@ -131,6 +136,7 @@ export class CombatController {
     if (next === this.attackState) return false;
     this.attackState = next;
     this.updateSlashVisual();
+    this.callbacks.attackStarted?.();
     return true;
   }
 
@@ -161,6 +167,7 @@ export class CombatController {
     this.dashState = next;
     if (next.status === "active") this.player.setFacing(next.direction);
     this.createDashTrail();
+    this.callbacks.dashStarted?.();
     return true;
   }
 
@@ -185,8 +192,11 @@ export class CombatController {
       this.player.getFacing(),
     );
     this.player.flashDamage();
-    this.scene.cameras.main.shake(90, 0.0045);
+    if (this.callbacks.screenShakeEnabled?.() !== false) {
+      this.scene.cameras.main.shake(90, 0.0045);
+    }
     this.createDamageVignette();
+    this.callbacks.playerHit?.();
     this.updateSlashVisual();
     this.callbacks.healthChanged(this.vitality);
     if (transition.outcome === "defeated") this.callbacks.playerDefeated();
@@ -300,7 +310,8 @@ export class CombatController {
 
   private createDashTrail(): void {
     const facing = this.player.getFacing();
-    for (let index = 1; index <= 3; index += 1) {
+    const count = this.callbacks.reducedMotion?.() === true ? 1 : 3;
+    for (let index = 1; index <= count; index += 1) {
       const afterImage = this.scene.add
         .circle(
           this.player.x - facing.x * index * 12,
@@ -314,7 +325,7 @@ export class CombatController {
         targets: afterImage,
         alpha: 0,
         scale: 0.55,
-        duration: 180,
+        duration: this.callbacks.reducedMotion?.() === true ? 90 : 180,
         onComplete: () => afterImage.destroy(),
       });
     }
@@ -329,7 +340,7 @@ export class CombatController {
     this.scene.tweens.add({
       targets: flash,
       alpha: 0,
-      duration: 180,
+      duration: this.callbacks.reducedMotion?.() === true ? 90 : 180,
       onComplete: () => flash.destroy(),
     });
   }

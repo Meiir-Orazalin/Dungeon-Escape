@@ -1,5 +1,11 @@
 import Phaser from "phaser";
 
+import {
+  createEnemyAwakeningState,
+  enemyCanAct,
+  updateEnemyAwakening,
+  type EnemyAwakeningState,
+} from "../balance/enemyAwakening";
 import { COMBAT_CONFIG } from "../combat/config";
 import { createKnockback, updateKnockback } from "../combat/knockback";
 import { selectMeleeHits } from "../combat/melee";
@@ -13,6 +19,7 @@ import type { EncounterPlan, EnemySpawnPlan } from "../encounters/types";
 import type { Player } from "../entities/Player";
 import { deriveEffectiveEnemyStats, getFloorDifficulty } from "../run/difficulty";
 import type { EffectiveEnemyStats, FloorDifficultyProfile } from "../run/types";
+import { EnemyHealthBar } from "../ui/EnemyHealthBar";
 import {
   createAshWispState,
   createStoneWardenState,
@@ -34,6 +41,10 @@ export interface EnemySummary {
   readonly maximumHealth: number;
   readonly alive: boolean;
   readonly state: EnemyReadableState;
+  readonly discovered: boolean;
+  readonly awakening: boolean;
+  readonly awakeningRemainingMs: number;
+  readonly awakeningConsumed: boolean;
 }
 
 type ArcadeCallbackObject = Parameters<Phaser.Types.Physics.Arcade.ArcadePhysicsCallback>[0];
@@ -44,6 +55,8 @@ interface EnemyRuntime {
   readonly sprite: Phaser.Physics.Arcade.Sprite;
   readonly shadow: Phaser.GameObjects.Ellipse;
   readonly telegraph: Phaser.GameObjects.Arc;
+  readonly awakeningRing: Phaser.GameObjects.Arc;
+  readonly healthBar: EnemyHealthBar;
   readonly effective: EffectiveEnemyStats;
   health: number;
   state: EnemyReadableState;
@@ -52,6 +65,7 @@ interface EnemyRuntime {
   knockback: KnockbackState | null;
   wallImpact: boolean;
   discovered: boolean;
+  awakening: EnemyAwakeningState;
 }
 
 interface EnemyManagerCallbacks {
@@ -64,6 +78,10 @@ interface EnemyManagerCallbacks {
       position: Vector2;
     }>,
   ) => void;
+  readonly enemyAwakened?: (enemyId: string) => void;
+  readonly enemyHit?: (enemyId: string) => void;
+  readonly wardenWallImpact?: (enemyId: string) => void;
+  readonly highContrast?: () => boolean;
 }
 
 function textureFor(archetype: EnemySpawnPlan["archetype"]): string {
@@ -173,6 +191,10 @@ export class EnemyManager {
     return [...this.projectiles].filter((projectile) => projectile.active).length;
   }
 
+  public getVisibleHealthBarCount(): number {
+    return [...this.enemies.values()].filter((enemy) => enemy.healthBar.isVisible()).length;
+  }
+
   public getSummaries(): readonly EnemySummary[] {
     return Object.freeze(
       [...this.enemies.values()]
@@ -188,6 +210,11 @@ export class EnemyManager {
             maximumHealth: enemy.effective.maximumHealth,
             alive: enemy.health > 0,
             state: enemy.state,
+            discovered: enemy.discovered,
+            awakening: enemy.awakening.status === "awakening",
+            awakeningRemainingMs:
+              enemy.awakening.status === "awakening" ? enemy.awakening.remainingMs : 0,
+            awakeningConsumed: enemy.awakening.consumed,
           }),
         ),
     );
@@ -198,6 +225,7 @@ export class EnemyManager {
     this.enemies.forEach((enemy) => {
       enemy.sprite.setVelocity(0, 0);
       enemy.telegraph.setVisible(false);
+      enemy.awakeningRing.setVisible(false);
     });
     this.destroyAllProjectiles();
   }
@@ -222,6 +250,8 @@ export class EnemyManager {
     this.colliders.length = 0;
     this.enemies.forEach((enemy) => {
       enemy.telegraph.destroy();
+      enemy.awakeningRing.destroy();
+      enemy.healthBar.destroy();
       enemy.shadow.destroy();
     });
     this.enemies.clear();
@@ -267,6 +297,12 @@ export class EnemyManager {
       .setStrokeStyle(3, plan.archetype === "ash-wisp" ? 0xd492c9 : 0xe56f58, 0.9)
       .setDepth(5.8)
       .setVisible(false);
+    const awakeningRing = this.scene.add
+      .circle(plan.position.x, plan.position.y, diameter * 0.8, 0xd8b46d, 0.08)
+      .setStrokeStyle(3, 0xf1d28b, 0.95)
+      .setDepth(5.9)
+      .setVisible(false);
+    const healthBar = new EnemyHealthBar(this.scene, plan.archetype);
     this.enemyGroup.add(sprite);
     this.enemies.set(plan.id, {
       plan,
@@ -274,6 +310,8 @@ export class EnemyManager {
       sprite,
       shadow,
       telegraph,
+      awakeningRing,
+      healthBar,
       effective,
       health: effective.maximumHealth,
       state: "dormant",
@@ -282,6 +320,7 @@ export class EnemyManager {
       knockback: null,
       wallImpact: false,
       discovered: false,
+      awakening: createEnemyAwakeningState(),
     });
   }
 
@@ -293,15 +332,61 @@ export class EnemyManager {
       enemy.sprite.setVisible(true);
       enemy.shadow.setVisible(true);
       (enemy.sprite.body as Phaser.Physics.Arcade.Body).enable = true;
+      enemy.awakening = updateEnemyAwakening(enemy.awakening, {
+        discovered: true,
+        dead: false,
+        deltaMs: 0,
+      });
+      enemy.state = "awakening";
+      enemy.awakeningRing.setVisible(true);
+      this.callbacks.enemyAwakened?.(enemy.plan.id);
+    }
+    if (!enemy.discovered) {
+      enemy.state = "dormant";
+      enemy.sprite.setVelocity(0, 0);
+      enemy.telegraph.setVisible(false);
+      enemy.awakeningRing.setVisible(false);
+      enemy.healthBar.update(
+        enemy.sprite.x,
+        enemy.sprite.y,
+        enemy.health,
+        enemy.effective.maximumHealth,
+        false,
+        false,
+        delta,
+        this.callbacks.highContrast?.() === true,
+      );
+      return;
     }
     if (!this.active) {
       enemy.sprite.setVelocity(0, 0);
       return;
     }
+    enemy.awakening = updateEnemyAwakening(enemy.awakening, {
+      discovered,
+      dead: false,
+      deltaMs: delta,
+    });
+    if (!enemyCanAct(enemy.awakening)) {
+      enemy.state = "awakening";
+      enemy.sprite.setVelocity(0, 0);
+      enemy.telegraph.setVisible(false);
+      enemy.awakeningRing
+        .setVisible(true)
+        .setScale(
+          1 +
+            (enemy.awakening.status === "awakening"
+              ? (450 - enemy.awakening.remainingMs) / 450
+              : 0),
+        );
+      this.finishEnemyFrame(enemy, delta);
+      return;
+    }
+    enemy.awakeningRing.setVisible(false);
     if (enemy.knockback) {
       enemy.sprite.setVelocity(enemy.knockback.velocity.x, enemy.knockback.velocity.y);
       enemy.knockback = updateKnockback(enemy.knockback, delta);
-      this.finishEnemyFrame(enemy);
+      this.finishEnemyFrame(enemy, delta);
       return;
     }
 
@@ -341,10 +426,10 @@ export class EnemyManager {
       enemy.sprite.setVelocity(transition.velocity.x, transition.velocity.y);
       enemy.telegraph.setVisible(enemy.state === "wind-up");
     }
-    this.finishEnemyFrame(enemy);
+    this.finishEnemyFrame(enemy, delta);
   }
 
-  private finishEnemyFrame(enemy: EnemyRuntime): void {
+  private finishEnemyFrame(enemy: EnemyRuntime, delta = 0): void {
     const radius = ENEMY_ARCHETYPE_CONFIG[enemy.plan.archetype].bodyRadius;
     const minimumX = enemy.room.x * this.layout.tileSize + radius;
     const maximumX = (enemy.room.x + enemy.room.width) * this.layout.tileSize - radius;
@@ -354,6 +439,17 @@ export class EnemyManager {
     enemy.sprite.y = Phaser.Math.Clamp(enemy.sprite.y, minimumY, maximumY);
     enemy.shadow.setPosition(enemy.sprite.x, enemy.sprite.y + radius);
     enemy.telegraph.setPosition(enemy.sprite.x, enemy.sprite.y);
+    enemy.awakeningRing.setPosition(enemy.sprite.x, enemy.sprite.y);
+    enemy.healthBar.update(
+      enemy.sprite.x,
+      enemy.sprite.y,
+      enemy.health,
+      enemy.effective.maximumHealth,
+      enemy.discovered,
+      this.currentRoomId === enemy.plan.roomId,
+      delta,
+      this.callbacks.highContrast?.() === true,
+    );
     const body = enemy.sprite.body as Phaser.Physics.Arcade.Body;
     if (body.velocity.lengthSq() > 0) {
       enemy.sprite.setRotation(Math.atan2(body.velocity.y, body.velocity.x));
@@ -364,6 +460,8 @@ export class EnemyManager {
     const enemy = this.enemies.get(id);
     if (!enemy || enemy.health === 0) return;
     enemy.health = Math.max(0, enemy.health - Math.max(1, Math.floor(damage)));
+    enemy.healthBar.damaged();
+    this.callbacks.enemyHit?.(enemy.plan.id);
     enemy.sprite.setTint(0xffe1b1);
     this.scene.time.delayedCall(90, () => {
       if (enemy.sprite.active) enemy.sprite.clearTint();
@@ -406,6 +504,8 @@ export class EnemyManager {
     (enemy.sprite.body as Phaser.Physics.Arcade.Body).enable = false;
     enemy.shadow.setVisible(false);
     enemy.telegraph.setVisible(false);
+    enemy.awakeningRing.setVisible(false);
+    enemy.healthBar.destroy();
     this.destroyOwnerProjectiles(enemy.plan.id);
     this.callbacks.enemyDefeated(
       Object.freeze({
@@ -452,6 +552,7 @@ export class EnemyManager {
         (direction.x > 0 && body.blocked.right) ||
         (direction.y < 0 && body.blocked.up) ||
         (direction.y > 0 && body.blocked.down);
+      if (enemy.wallImpact) this.callbacks.wardenWallImpact?.(enemy.plan.id);
     }
   }
 
@@ -463,6 +564,7 @@ export class EnemyManager {
       !enemy ||
       enemy.health === 0 ||
       !enemy.discovered ||
+      !enemyCanAct(enemy.awakening) ||
       this.currentRoomId !== enemy.plan.roomId
     ) {
       return;

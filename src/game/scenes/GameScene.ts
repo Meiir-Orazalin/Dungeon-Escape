@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 
+import { getAudioDirector, type AudioDirector } from "../audio/AudioDirector";
 import { CombatController } from "../combat/CombatController";
 import { transitionRunOutcome } from "../combat/runOutcome";
 import type { RunOutcome } from "../combat/types";
@@ -70,6 +71,29 @@ import { transitionActiveRunActivity } from "../upgrades/activityState";
 import { getUpgrade } from "../upgrades/catalog";
 import { deriveEffectivePlayerStats } from "../upgrades/effectiveStats";
 import type { UpgradeId } from "../upgrades/types";
+import { EffectPool } from "../effects/EffectPool";
+import { shouldRequestAutomaticPause } from "../presentation/focusPause";
+import { requestGameFullscreen } from "../presentation/fullscreen";
+import {
+  NO_PRESENTATION_MODAL,
+  transitionPresentationModal,
+  type PresentationModal,
+} from "../presentation/modalState";
+import { isLowHealth } from "../presentation/motion";
+import {
+  getPresentationRuntime,
+  type PresentationRuntime,
+} from "../presentation/PresentationRuntime";
+import {
+  DEFAULT_PRESENTATION_SETTINGS,
+  effectiveScreenShake,
+  type PresentationSettings,
+} from "../presentation/settings";
+import { FieldManualOverlay } from "../ui/FieldManualOverlay";
+import { FloorIntro } from "../ui/FloorIntro";
+import { LowHealthOverlay } from "../ui/LowHealthOverlay";
+import { PauseOverlay } from "../ui/PauseOverlay";
+import { SettingsOverlay } from "../ui/SettingsOverlay";
 
 interface MovementKeys {
   readonly up: Phaser.Input.Keyboard.Key;
@@ -189,6 +213,32 @@ export interface GameSceneSnapshot {
   readonly cumulativeStatistics: RunStatistics;
   readonly currentFloorStatistics: CurrentFloorStatistics;
   readonly completedFloorSummaries: readonly FloorSummary[];
+  readonly presentationSettings: PresentationSettings;
+  readonly effectiveReducedMotion: boolean;
+  readonly effectiveScreenShake: boolean;
+  readonly highContrast: boolean;
+  readonly largeText: boolean;
+  readonly presentationModalKind: PresentationModal["kind"];
+  readonly pauseOverlayVisible: boolean;
+  readonly settingsOverlayVisible: boolean;
+  readonly fieldManualVisible: boolean;
+  readonly firstRunOnboardingActive: boolean;
+  readonly onboardingComplete: boolean;
+  readonly simulationPaused: boolean;
+  readonly physicsPaused: boolean;
+  readonly floorTimerPaused: boolean;
+  readonly runTimerPaused: boolean;
+  readonly audioSupported: boolean;
+  readonly audioUnlocked: boolean;
+  readonly audioMuted: boolean;
+  readonly currentAmbienceId: string | null;
+  readonly activeAmbienceCount: number;
+  readonly activeEffectVoiceCount: number;
+  readonly peakEffectVoiceCount: number;
+  readonly activeTransientEffectCount: number;
+  readonly peakTransientEffectCount: number;
+  readonly lowHealthPresentationVisible: boolean;
+  readonly enemyHealthBarVisibleCount: number;
 }
 
 export class GameScene extends Phaser.Scene {
@@ -228,6 +278,25 @@ export class GameScene extends Phaser.Scene {
   private victoryOverlay?: RunVictoryOverlay;
   private defeatOverlay?: RunDefeatOverlay;
   private upgradeOverlay?: UpgradeChoiceOverlay;
+  private pauseOverlay?: PauseOverlay;
+  private settingsOverlay?: SettingsOverlay;
+  private fieldManual?: FieldManualOverlay;
+  private floorIntro?: FloorIntro;
+  private lowHealthOverlay?: LowHealthOverlay;
+  private effects?: EffectPool;
+  private presentation?: PresentationRuntime;
+  private audio?: AudioDirector;
+  private presentationModal: PresentationModal = NO_PRESENTATION_MODAL;
+  private settingsUnsubscribe?: () => void;
+  private firstRunOnboardingActive = false;
+  private lowHealthVisible = false;
+  private muteHeld = false;
+  private fullscreenHeld = false;
+  private pauseHeld = false;
+  private readonly handleWindowBlur = (): void => this.requestAutomaticPause();
+  private readonly handleVisibilityChange = (): void => {
+    if (document.visibilityState === "hidden") this.requestAutomaticPause();
+  };
   private lastPlayerTileIndex = -1;
   private floorElapsedTimeMs = 0;
   private runElapsedTimeMs = 0;
@@ -244,6 +313,8 @@ export class GameScene extends Phaser.Scene {
 
   public create(data: GameSceneData = {}): void {
     this.resetRuntimeState();
+    this.presentation = getPresentationRuntime(this);
+    this.audio = getAudioDirector(this);
     const registrySeed = this.registry.get(ACTIVE_SEED_REGISTRY_KEY) as unknown;
     const requestedSeed =
       data.seed ?? (typeof registrySeed === "string" ? registrySeed : createFriendlySeed());
@@ -292,6 +363,10 @@ export class GameScene extends Phaser.Scene {
       {
         damagePlayer: (source) => this.handlePlayerDamage(source),
         enemyDefeated: (details) => this.handleEnemyDefeated(details),
+        enemyAwakened: (enemyId) => this.handleEnemyAwakened(enemyId),
+        enemyHit: () => this.audio?.playEffect("enemy-hit"),
+        wardenWallImpact: () => this.shakeCamera(70, 0.003),
+        highContrast: () => this.presentation?.getSettings().highContrast === true,
       },
       this.floor.difficulty,
     );
@@ -301,8 +376,17 @@ export class GameScene extends Phaser.Scene {
       this.player,
       this.enemies,
       {
-        healthChanged: (vitality) => this.hud?.updateHealth(vitality),
+        healthChanged: (vitality) => {
+          this.hud?.updateHealth(vitality);
+          this.updateLowHealthPresentation(vitality);
+        },
         playerDefeated: () => this.defeatRun(),
+        attackStarted: () => this.audio?.playEffect("sword-swing"),
+        dashStarted: () => this.audio?.playEffect("dash"),
+        playerHit: () => this.audio?.playEffect("player-hit", true),
+        screenShakeEnabled: () =>
+          effectiveScreenShake(this.presentation?.getSettings() ?? DEFAULT_PRESENTATION_SETTINGS),
+        reducedMotion: () => this.presentation?.getSettings().reducedMotion === true,
       },
       { effectiveStats: initialStats, currentHealth: this.checkpoint.carry.currentHealth },
     );
@@ -313,11 +397,13 @@ export class GameScene extends Phaser.Scene {
       {
         stateChanged: (state, becameReady) => this.handleRewardStateChanged(state, becameReady),
         chestOpened: () => {
+          this.audio?.playEffect("chest-open");
           this.objectiveToast?.show("TREASURE CHEST OPENED", "Its runes spill onto the floor.");
           announceGameState("Treasure Chest opened.");
         },
         healPlayer: (amount) => this.combat?.heal(amount) ?? this.unavailableHealing(),
         healed: (vitality, restoredHealth) => {
+          this.audio?.playEffect("flask-heal");
           this.objectiveToast?.show(
             "VITALITY RESTORED",
             `${restoredHealth} health restored. ${vitality.health} / ${vitality.maximumHealth}`,
@@ -326,6 +412,7 @@ export class GameScene extends Phaser.Scene {
             `Vitality Flask restored ${restoredHealth} health. ${vitality.health} health remaining.`,
           );
         },
+        shardCollected: () => this.audio?.playEffect("shard-collected"),
       },
       {
         floorNumber: this.floor.floorNumber,
@@ -342,6 +429,8 @@ export class GameScene extends Phaser.Scene {
       floorName: this.floor.theme.name,
       runSeed: this.runPlan.runSeed,
       accentColor: this.floor.theme.hudAccentColor,
+      highContrast: this.presentation.getSettings().highContrast,
+      largeText: this.presentation.getSettings().largeText,
     });
     this.hud.updateObjective(this.objectiveState);
     this.hud.updateTimer(0, this.runElapsedTimeMs);
@@ -356,6 +445,7 @@ export class GameScene extends Phaser.Scene {
       this.encounterPlan,
       this.lootPlan,
       this.floor.theme,
+      this.presentation.getSettings().highContrast,
     );
     this.minimap.update(
       this.discovery,
@@ -365,6 +455,24 @@ export class GameScene extends Phaser.Scene {
     );
     this.interactionPrompt = new InteractionPrompt(this);
     this.objectiveToast = new ObjectiveToast(this);
+    const presentationSettings = this.presentation.getSettings();
+    this.effects = new EffectPool(this, presentationSettings.reducedMotion);
+    this.lowHealthOverlay = new LowHealthOverlay(this);
+    this.updateLowHealthPresentation(this.combat.getVitality(), false);
+    this.settingsUnsubscribe = this.presentation.subscribe((settings) => {
+      this.effects?.setReducedMotion(settings.reducedMotion);
+      this.hud?.applyPresentation(settings.highContrast, settings.largeText);
+      this.minimap?.setHighContrast(settings.highContrast);
+      this.interactionPrompt?.applyPresentation(settings.highContrast, settings.largeText);
+      this.updateMinimap();
+      const vitality = this.combat?.getVitality();
+      if (vitality) this.updateLowHealthPresentation(vitality, false);
+    });
+    this.interactionPrompt.applyPresentation(
+      presentationSettings.highContrast,
+      presentationSettings.largeText,
+    );
+    this.audio.setFloorAmbience(this.floor.floorNumber);
 
     this.configureCamera();
     this.registerInput();
@@ -373,7 +481,14 @@ export class GameScene extends Phaser.Scene {
       this.layout.spawn.tileY,
       this.layout.mapWidth,
     );
+    this.floorIntro = new FloorIntro(
+      this,
+      this.floor.floorNumber,
+      this.floor.theme.name,
+      presentationSettings.reducedMotion,
+    );
     this.announceFloorStart(data.entry);
+    if (this.presentation.needsOnboarding()) this.openFirstRunOnboarding();
   }
 
   public override update(_time: number, delta: number): void {
@@ -389,8 +504,12 @@ export class GameScene extends Phaser.Scene {
     ) {
       return;
     }
-    if (this.runOutcome !== "active" || this.runActivity !== "playing" || this.isTransitioning) {
-      this.player.stopMovement();
+    if (
+      this.runOutcome !== "active" ||
+      this.runActivity !== "playing" ||
+      this.presentationModal.kind !== "none" ||
+      this.isTransitioning
+    ) {
       return;
     }
 
@@ -432,6 +551,17 @@ export class GameScene extends Phaser.Scene {
     const rewardState = this.loot.getState();
     const effectiveStats = this.combat.getEffectiveStats();
     const activeOffer = rewardState.forge.status === "choosing" ? rewardState.forge.offer : null;
+    const settings = this.presentation?.getSettings() ?? DEFAULT_PRESENTATION_SETTINGS;
+    const audio = this.audio?.getSnapshot() ?? {
+      supported: false,
+      unlocked: false,
+      muted: settings.muted,
+      currentAmbienceId: null,
+      activeAmbienceCount: 0,
+      activeEffectVoiceCount: 0,
+      peakEffectVoiceCount: 0,
+    };
+    const simulationPaused = this.presentationModal.kind !== "none";
 
     return {
       playerPosition: { x: this.player.x, y: this.player.y },
@@ -474,7 +604,10 @@ export class GameScene extends Phaser.Scene {
       gateReady: this.ancientGate?.isReady() === true,
       floorComplete: this.runActivity === "floor-cleared" || this.runOutcome === "escaped",
       movementEnabled:
-        this.runOutcome === "active" && this.runActivity === "playing" && !this.isTransitioning,
+        this.runOutcome === "active" &&
+        this.runActivity === "playing" &&
+        this.presentationModal.kind === "none" &&
+        !this.isTransitioning,
       interactionPrompt: this.interactionPrompt?.getText() ?? null,
       elapsedTimeMs: this.floorElapsedTimeMs,
       floorTimeMs: this.floorElapsedTimeMs,
@@ -537,6 +670,34 @@ export class GameScene extends Phaser.Scene {
       cumulativeStatistics: this.cumulativeStats,
       currentFloorStatistics: this.getCurrentFloorStatistics(),
       completedFloorSummaries: this.completedFloors,
+      presentationSettings: settings,
+      effectiveReducedMotion: settings.reducedMotion,
+      effectiveScreenShake: effectiveScreenShake(settings),
+      highContrast: settings.highContrast,
+      largeText: settings.largeText,
+      presentationModalKind: this.presentationModal.kind,
+      pauseOverlayVisible: this.pauseOverlay !== undefined,
+      settingsOverlayVisible: this.settingsOverlay !== undefined,
+      fieldManualVisible: this.fieldManual !== undefined,
+      firstRunOnboardingActive: this.firstRunOnboardingActive,
+      onboardingComplete: this.presentation?.needsOnboarding() === false,
+      simulationPaused,
+      physicsPaused: this.physics.world.isPaused,
+      floorTimerPaused:
+        simulationPaused || this.runActivity !== "playing" || this.runOutcome !== "active",
+      runTimerPaused:
+        simulationPaused || this.runActivity !== "playing" || this.runOutcome !== "active",
+      audioSupported: audio.supported,
+      audioUnlocked: audio.unlocked,
+      audioMuted: audio.muted,
+      currentAmbienceId: audio.currentAmbienceId,
+      activeAmbienceCount: audio.activeAmbienceCount,
+      activeEffectVoiceCount: audio.activeEffectVoiceCount,
+      peakEffectVoiceCount: audio.peakEffectVoiceCount,
+      activeTransientEffectCount: this.effects?.getActiveCount() ?? 0,
+      peakTransientEffectCount: this.effects?.getPeakCount() ?? 0,
+      lowHealthPresentationVisible: this.lowHealthVisible,
+      enemyHealthBarVisibleCount: this.enemies.getVisibleHealthBarCount(),
     };
   }
 
@@ -567,12 +728,25 @@ export class GameScene extends Phaser.Scene {
     this.isSpaceAttackHeld = false;
     this.isJAttackHeld = false;
     this.isDashHeld = false;
+    this.muteHeld = false;
+    this.fullscreenHeld = false;
+    this.pauseHeld = false;
+    this.presentationModal = NO_PRESENTATION_MODAL;
+    this.firstRunOnboardingActive = false;
+    this.lowHealthVisible = false;
     this.completedFloors = [];
     this.provisionalSummary = undefined;
     this.floorClearedOverlay = undefined;
     this.victoryOverlay = undefined;
     this.defeatOverlay = undefined;
     this.upgradeOverlay = undefined;
+    this.pauseOverlay = undefined;
+    this.settingsOverlay = undefined;
+    this.fieldManual = undefined;
+    this.floorIntro = undefined;
+    this.lowHealthOverlay = undefined;
+    this.effects = undefined;
+    this.settingsUnsubscribe = undefined;
   }
 
   private configureCamera(): void {
@@ -611,7 +785,16 @@ export class GameScene extends Phaser.Scene {
     this.attackJKey.on("up", this.handleJAttackUp, this);
     this.dashKey.on("down", this.handleDashDown, this);
     this.dashKey.on("up", this.handleDashUp, this);
+    keyboard.on("keydown-ESC", this.handlePauseDown, this);
+    keyboard.on("keyup-ESC", this.handlePauseUp, this);
+    keyboard.on("keydown-H", this.handleManualShortcut, this);
+    keyboard.on("keydown-M", this.handleMuteDown, this);
+    keyboard.on("keyup-M", this.handleMuteUp, this);
+    keyboard.on("keydown-F", this.handleFullscreenDown, this);
+    keyboard.on("keyup-F", this.handleFullscreenUp, this);
     this.input.on("pointerdown", this.handlePointerAttack, this);
+    window.addEventListener("blur", this.handleWindowBlur);
+    document.addEventListener("visibilitychange", this.handleVisibilityChange);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.cleanUpInput, this);
   }
 
@@ -648,7 +831,12 @@ export class GameScene extends Phaser.Scene {
   private handleDashDown(): void {
     if (this.isDashHeld) return;
     this.isDashHeld = true;
-    if (this.runOutcome === "active" && this.runActivity === "playing" && !this.isTransitioning) {
+    if (
+      this.runOutcome === "active" &&
+      this.runActivity === "playing" &&
+      this.presentationModal.kind === "none" &&
+      !this.isTransitioning
+    ) {
       this.combat?.beginDash(this.readMovementInput());
     }
   }
@@ -657,11 +845,47 @@ export class GameScene extends Phaser.Scene {
     this.isDashHeld = false;
   }
 
+  private handlePauseDown(): void {
+    if (this.pauseHeld) return;
+    this.pauseHeld = true;
+    if (this.presentationModal.kind === "none") this.openPause();
+  }
+
+  private handlePauseUp(): void {
+    this.pauseHeld = false;
+  }
+
+  private handleManualShortcut(): void {
+    if (this.presentationModal.kind !== "none") return;
+    this.openManualFromGame();
+  }
+
+  private handleMuteDown(): void {
+    if (this.muteHeld || this.presentationModal.kind === "pause") return;
+    this.muteHeld = true;
+    this.toggleMute();
+  }
+
+  private handleMuteUp(): void {
+    this.muteHeld = false;
+  }
+
+  private handleFullscreenDown(): void {
+    if (this.fullscreenHeld || this.presentationModal.kind === "pause") return;
+    this.fullscreenHeld = true;
+    void this.toggleFullscreen();
+  }
+
+  private handleFullscreenUp(): void {
+    this.fullscreenHeld = false;
+  }
+
   private handlePointerAttack(pointer: Phaser.Input.Pointer): void {
     if (
       pointer.button !== 0 ||
       this.runOutcome !== "active" ||
       this.runActivity !== "playing" ||
+      this.presentationModal.kind !== "none" ||
       this.isTransitioning
     ) {
       return;
@@ -671,17 +895,22 @@ export class GameScene extends Phaser.Scene {
   }
 
   private handleActiveRestart(): void {
-    if (this.runOutcome !== "active") return;
+    if (this.runOutcome !== "active" || this.presentationModal.kind !== "none") return;
     this.replayCurrentFloor();
   }
 
   private handleActiveNewDungeon(): void {
-    if (this.runOutcome !== "active") return;
+    if (this.runOutcome !== "active" || this.presentationModal.kind !== "none") return;
     this.generateNewRun();
   }
 
   private attack(): void {
-    if (this.runOutcome !== "active" || this.runActivity !== "playing" || this.isTransitioning)
+    if (
+      this.runOutcome !== "active" ||
+      this.runActivity !== "playing" ||
+      this.presentationModal.kind !== "none" ||
+      this.isTransitioning
+    )
       return;
     this.combat?.beginFacingAttack();
   }
@@ -691,6 +920,7 @@ export class GameScene extends Phaser.Scene {
       !this.player ||
       this.runOutcome !== "active" ||
       this.runActivity !== "playing" ||
+      this.presentationModal.kind !== "none" ||
       this.isTransitioning ||
       this.combat?.canInteract() !== true
     ) {
@@ -709,7 +939,8 @@ export class GameScene extends Phaser.Scene {
       !this.objectivePlan ||
       !this.loot ||
       this.runOutcome !== "active" ||
-      this.runActivity !== "playing"
+      this.runActivity !== "playing" ||
+      this.presentationModal.kind !== "none"
     ) {
       return null;
     }
@@ -730,12 +961,292 @@ export class GameScene extends Phaser.Scene {
     ]);
   }
 
+  private openFirstRunOnboarding(): void {
+    if (!this.presentation || this.presentationModal.kind !== "none") return;
+    const next = transitionPresentationModal(
+      this.presentationModal,
+      { type: "open-manual", returnTo: "game" },
+      { outcome: this.runOutcome, activity: this.runActivity },
+    );
+    if (next === this.presentationModal) return;
+    this.presentationModal = next;
+    this.firstRunOnboardingActive = true;
+    this.suspendForPresentation();
+    this.createFieldManual(true);
+    announceGameState(
+      "First-run onboarding opened. Four Field Manual sections introduce the descent.",
+    );
+  }
+
+  private openPause(): void {
+    const next = transitionPresentationModal(
+      this.presentationModal,
+      { type: "open-pause" },
+      { outcome: this.runOutcome, activity: this.runActivity },
+    );
+    if (next === this.presentationModal) return;
+    this.presentationModal = next;
+    this.suspendForPresentation();
+    this.showPauseOverlay();
+    announceGameState("Run paused.");
+  }
+
+  private requestAutomaticPause(): void {
+    if (
+      !shouldRequestAutomaticPause(this.runOutcome, this.runActivity, this.presentationModal.kind)
+    ) {
+      return;
+    }
+    this.openPause();
+  }
+
+  private showPauseOverlay(): void {
+    if (
+      this.presentationModal.kind !== "pause" ||
+      this.pauseOverlay ||
+      !this.floor ||
+      !this.runPlan ||
+      !this.combat ||
+      !this.loot ||
+      !this.presentation
+    ) {
+      return;
+    }
+    const vitality = this.combat.getVitality();
+    this.pauseOverlay = new PauseOverlay(
+      this,
+      {
+        floorNumber: this.floor.floorNumber,
+        floorName: this.floor.theme.name,
+        runSeed: this.runPlan.runSeed,
+        health: `${vitality.health} / ${vitality.maximumHealth}`,
+        buildCount: this.loot.getState().selectedUpgradeIds.length,
+      },
+      this.presentation.getSettings(),
+      {
+        resume: () => {
+          this.pauseOverlay = undefined;
+          this.resumeFromPause();
+        },
+        manual: () => {
+          this.pauseOverlay = undefined;
+          this.openManualFromPause();
+        },
+        settings: () => {
+          this.pauseOverlay = undefined;
+          this.openSettingsFromPause();
+        },
+        replay: () => this.replayCurrentFloor(),
+        newRun: () => this.generateNewRun(),
+        fullscreen: () => void this.toggleFullscreen(),
+        mute: () => this.toggleMute(),
+      },
+    );
+  }
+
+  private resumeFromPause(): void {
+    if (this.presentationModal.kind !== "pause") return;
+    this.presentationModal = transitionPresentationModal(
+      this.presentationModal,
+      { type: "resume" },
+      { outcome: this.runOutcome, activity: this.runActivity },
+    );
+    this.resumeFromPresentation();
+    announceGameState("Run resumed.");
+  }
+
+  private openManualFromGame(): void {
+    if (this.runOutcome !== "active" || this.runActivity !== "playing") return;
+    const next = transitionPresentationModal(
+      this.presentationModal,
+      { type: "open-manual", returnTo: "game" },
+      { outcome: this.runOutcome, activity: this.runActivity },
+    );
+    if (next === this.presentationModal) return;
+    this.presentationModal = next;
+    this.suspendForPresentation();
+    this.createFieldManual(false);
+    announceGameState("Field Manual opened. Gameplay is paused.");
+  }
+
+  private openManualFromPause(): void {
+    const next = transitionPresentationModal(
+      this.presentationModal,
+      { type: "open-manual", returnTo: "pause" },
+      { outcome: this.runOutcome, activity: this.runActivity },
+    );
+    if (next === this.presentationModal) {
+      this.showPauseOverlay();
+      return;
+    }
+    this.presentationModal = next;
+    this.createFieldManual(false);
+    announceGameState("Field Manual opened from Pause.");
+  }
+
+  private createFieldManual(onboarding: boolean): void {
+    if (!this.presentation || this.fieldManual) return;
+    this.fieldManual = new FieldManualOverlay(
+      this,
+      this.presentation.getSettings(),
+      {
+        close: () => {
+          this.fieldManual = undefined;
+          const completedOnboarding = this.firstRunOnboardingActive;
+          if (this.firstRunOnboardingActive) {
+            this.presentation?.finishOnboarding();
+            this.firstRunOnboardingActive = false;
+          }
+          const returnTo =
+            this.presentationModal.kind === "manual" ? this.presentationModal.returnTo : "game";
+          this.presentationModal = transitionPresentationModal(
+            this.presentationModal,
+            { type: "back" },
+            { outcome: this.runOutcome, activity: this.runActivity },
+          );
+          this.audio?.playEffect("ui-back");
+          if (returnTo === "pause") this.showPauseOverlay();
+          else {
+            this.resumeFromPresentation();
+            announceGameState(
+              completedOnboarding
+                ? `Onboarding complete. Floor ${this.floor?.floorNumber ?? 1} begins.`
+                : "Field Manual closed. Run resumed.",
+            );
+          }
+        },
+        focus: () => this.audio?.playEffect("ui-focus"),
+      },
+      onboarding,
+    );
+  }
+
+  private openSettingsFromPause(): void {
+    const next = transitionPresentationModal(
+      this.presentationModal,
+      { type: "open-settings", returnTo: "pause" },
+      { outcome: this.runOutcome, activity: this.runActivity },
+    );
+    if (next === this.presentationModal) {
+      this.showPauseOverlay();
+      return;
+    }
+    this.presentationModal = next;
+    this.createSettingsOverlay();
+    announceGameState("Settings opened from Pause.");
+  }
+
+  private createSettingsOverlay(): void {
+    if (!this.presentation || this.settingsOverlay) return;
+    this.settingsOverlay = new SettingsOverlay(this, this.presentation.getSettings(), {
+      change: (key, value) => {
+        this.presentation?.update(key, value);
+        if (this.presentation)
+          this.settingsOverlay?.updateSettings(this.presentation.getSettings());
+      },
+      resetSettings: () => {
+        this.presentation?.resetSettings();
+        if (this.presentation)
+          this.settingsOverlay?.updateSettings(this.presentation.getSettings());
+      },
+      resetOnboarding: () => {
+        this.presentation?.resetOnboarding();
+        announceGameState("First-run onboarding reset.");
+      },
+      back: () => {
+        this.settingsOverlay = undefined;
+        this.presentationModal = transitionPresentationModal(
+          this.presentationModal,
+          { type: "back" },
+          { outcome: this.runOutcome, activity: this.runActivity },
+        );
+        this.audio?.playEffect("ui-back");
+        this.showPauseOverlay();
+      },
+      focus: () => this.audio?.playEffect("ui-focus"),
+    });
+  }
+
+  private suspendForPresentation(): void {
+    this.physics.world.pause();
+    this.tweens.pauseAll();
+    this.audio?.pause();
+    this.interactionPrompt?.setText(null);
+  }
+
+  private resumeFromPresentation(): void {
+    if (this.presentationModal.kind !== "none" || this.runOutcome !== "active") return;
+    this.physics.world.resume();
+    this.tweens.resumeAll();
+    this.audio?.resume();
+    this.updateInteractionPrompt();
+  }
+
+  private toggleMute(): void {
+    const muted = this.presentation?.toggleMute();
+    if (muted === undefined) return;
+    announceGameState(muted ? "Audio muted." : "Audio unmuted.");
+  }
+
+  private async toggleFullscreen(): Promise<void> {
+    this.audio?.unlock();
+    if (document.fullscreenElement) {
+      try {
+        await document.exitFullscreen();
+        announceGameState("Fullscreen exited.");
+      } catch {
+        announceGameState("Fullscreen could not be exited.");
+      }
+      return;
+    }
+    const frame = document.querySelector<HTMLElement>(".game-frame") ?? undefined;
+    const entered = await requestGameFullscreen(frame);
+    announceGameState(entered ? "Fullscreen entered." : "Fullscreen is unavailable.");
+  }
+
+  private handleEnemyAwakened(enemyId: string): void {
+    const enemy = this.enemies?.getSummaries().find((candidate) => candidate.id === enemyId);
+    if (!enemy) return;
+    this.effects?.burst(enemy.position.x, enemy.position.y, 0xe8c77f, 5);
+    announceGameState(`${enemy.archetype.replaceAll("-", " ")} awakens.`);
+  }
+
+  private updateLowHealthPresentation(
+    vitality: ReturnType<CombatController["getVitality"]>,
+    announce = true,
+  ): void {
+    const visible = isLowHealth(vitality.health, vitality.status);
+    const changed = visible !== this.lowHealthVisible;
+    this.lowHealthVisible = visible;
+    this.lowHealthOverlay?.setState(
+      visible,
+      this.presentation?.getSettings().reducedMotion === true,
+      this.presentation?.getSettings().highContrast === true,
+    );
+    if (!announce || !changed) return;
+    announceGameState(visible ? "Low health." : "Health recovered above the low-health threshold.");
+  }
+
+  private shakeCamera(duration: number, intensity: number): void {
+    const settings = this.presentation?.getSettings();
+    if (!settings || !effectiveScreenShake(settings)) return;
+    this.cameras.main.shake(duration, intensity);
+  }
+
   private collectKey(): void {
     const transition = reduceObjectiveState(this.objectiveState, { type: "collect-key" });
     if (transition.outcome !== "key-collected") return;
     this.objectiveState = transition.state;
     this.runicKey?.collect();
     this.ancientGate?.setReady(true);
+    this.audio?.playEffect("key-collected");
+    this.audio?.playEffect("gate-ready");
+    this.effects?.burst(
+      this.objectivePlan?.keyPosition.x ?? 0,
+      this.objectivePlan?.keyPosition.y ?? 0,
+      0xf3cb71,
+      8,
+    );
     this.updateObjectivePresentation();
     this.objectiveToast?.show("RUNES AWAKENED", "The Ancient Gate can now be opened.");
     announceGameState("Runic Key collected. The Ancient Gate can now be opened.");
@@ -747,6 +1258,7 @@ export class GameScene extends Phaser.Scene {
       elapsedTimeMs: this.floorElapsedTimeMs,
     });
     if (transition.outcome === "gate-blocked") {
+      this.audio?.playEffect("gate-sealed");
       this.ancientGate?.playBlockedReaction();
       this.objectiveToast?.show("THE GATE IS SEALED", "Find the Runic Key.");
       announceGameState("The Ancient Gate is sealed. Find the Runic Key.");
@@ -770,6 +1282,7 @@ export class GameScene extends Phaser.Scene {
     const state = this.loot.getState();
     if (state.forge.status !== "choosing") return;
     this.runActivity = transitionActiveRunActivity(this.runActivity, "open-upgrade");
+    this.audio?.playEffect("ui-confirm");
     this.player.stopMovement();
     this.combat?.pause();
     this.enemies?.pause();
@@ -783,6 +1296,7 @@ export class GameScene extends Phaser.Scene {
         select: (upgradeId) => this.selectUpgrade(upgradeId),
         close: () => this.closeUpgradeOverlay(),
       },
+      this.presentation?.getSettings(),
     );
     announceGameState(
       "Runeforge opened. Choose one of three run upgrades, or press Escape to leave.",
@@ -808,6 +1322,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     if (!this.loot.selectUpgrade(upgradeId)) return;
+    this.audio?.playEffect("upgrade-selected");
     const selected = this.loot.getState().selectedUpgradeIds;
     this.combat.applyEffectiveStats(
       deriveEffectivePlayerStats(selected),
@@ -818,6 +1333,7 @@ export class GameScene extends Phaser.Scene {
     this.enemies?.resume();
     const definition = getUpgrade(upgradeId);
     this.objectiveToast?.show(definition.name, definition.description);
+    this.effects?.burst(this.player?.x ?? 0, this.player?.y ?? 0, 0xc499db, 10);
     announceGameState(`${definition.name} selected. ${definition.description}`);
     this.handleRewardStateChanged(this.loot.getState(), false);
   }
@@ -846,9 +1362,13 @@ export class GameScene extends Phaser.Scene {
     this.hud?.updateObjective(this.objectiveState);
     this.updateMinimap();
     this.ancientGate?.playCompletion();
-    this.cameras.main.flash(OBJECTIVE_CONFIG.completionTransitionMs, 202, 181, 122, false);
+    if (this.presentation?.getSettings().reducedMotion !== true) {
+      this.cameras.main.flash(OBJECTIVE_CONFIG.completionTransitionMs, 202, 181, 122, false);
+    }
 
     if (this.floor.floorNumber < 3) {
+      this.audio?.playEffect("floor-cleared", true);
+      this.shakeCamera(120, 0.0025);
       this.runActivity = transitionActiveRunActivity(this.runActivity, "clear-floor");
       announceGameState(`Floor ${this.floor.floorNumber} cleared. Descend when ready.`);
       this.time.delayedCall(OBJECTIVE_CONFIG.completionTransitionMs, () => {
@@ -874,6 +1394,9 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.runOutcome = transitionRunOutcome(this.runOutcome, "escape");
+    this.audio?.playEffect("run-victory", true);
+    this.audio?.stopAmbience();
+    this.shakeCamera(160, 0.003);
     this.commitFinalFloor(summary);
     announceGameState("Dungeon conquered. The complete three-floor run is won.");
     this.time.delayedCall(OBJECTIVE_CONFIG.completionTransitionMs, () => this.showVictoryOverlay());
@@ -975,6 +1498,8 @@ export class GameScene extends Phaser.Scene {
   ): void {
     if (!this.enemies || this.runOutcome !== "active" || this.runActivity !== "playing") return;
     this.loot?.dropEnemyReward(details);
+    this.audio?.playEffect("enemy-defeat");
+    this.effects?.burst(details.position.x, details.position.y, 0xd68d68, 8);
     this.hud?.updateEnemies(this.enemies.getDefeatedCount(), this.enemies.getTotalCount());
     this.updateMinimap();
   }
@@ -983,6 +1508,7 @@ export class GameScene extends Phaser.Scene {
     this.hud?.updateRewards(state, this.lootPlan?.chests.length ?? 0);
     this.updateMinimap();
     if (becameReady) {
+      this.audio?.playEffect("forge-ready");
       const cost = state.forge.cost;
       this.objectiveToast?.show(
         "RUNEFORGE READY",
@@ -1003,11 +1529,16 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     this.runOutcome = transitionRunOutcome(this.runOutcome, "defeat");
+    this.audio?.playEffect("run-defeat", true);
+    this.audio?.stopAmbience();
     this.closeUpgradeOverlayForTransition();
     this.floorClearedOverlay?.destroy();
     this.floorClearedOverlay = undefined;
     this.freezeCurrentFloor();
-    this.cameras.main.flash(260, 122, 28, 35, false);
+    if (this.presentation?.getSettings().reducedMotion !== true) {
+      this.cameras.main.flash(260, 122, 28, 35, false);
+    }
+    this.shakeCamera(140, 0.003);
     announceGameState("Fallen in the depths. Replay this run or generate a new run.");
     this.time.delayedCall(360, () => {
       if (
@@ -1077,6 +1608,14 @@ export class GameScene extends Phaser.Scene {
   }
 
   private stopForSceneTransition(): void {
+    if (this.physics.world.isPaused) this.physics.world.resume();
+    this.tweens.resumeAll();
+    this.audio?.resume();
+    this.presentationModal = transitionPresentationModal(
+      this.presentationModal,
+      { type: "shutdown" },
+      { outcome: this.runOutcome, activity: this.runActivity },
+    );
     this.combat?.stopTerminal();
     this.enemies?.stopAll();
     this.loot?.freeze();
@@ -1084,6 +1623,13 @@ export class GameScene extends Phaser.Scene {
     this.floorClearedOverlay?.destroy();
     this.victoryOverlay?.destroy();
     this.defeatOverlay?.destroy();
+    this.pauseOverlay?.destroy();
+    this.settingsOverlay?.destroy();
+    this.fieldManual?.destroy();
+    this.floorIntro?.destroy();
+    this.pauseOverlay = undefined;
+    this.settingsOverlay = undefined;
+    this.fieldManual = undefined;
     this.interactionPrompt?.setText(null);
   }
 
@@ -1145,7 +1691,23 @@ export class GameScene extends Phaser.Scene {
     this.attackJKey?.off("up", this.handleJAttackUp, this);
     this.dashKey?.off("down", this.handleDashDown, this);
     this.dashKey?.off("up", this.handleDashUp, this);
+    const keyboard = this.input.keyboard;
+    keyboard?.off("keydown-ESC", this.handlePauseDown, this);
+    keyboard?.off("keyup-ESC", this.handlePauseUp, this);
+    keyboard?.off("keydown-H", this.handleManualShortcut, this);
+    keyboard?.off("keydown-M", this.handleMuteDown, this);
+    keyboard?.off("keyup-M", this.handleMuteUp, this);
+    keyboard?.off("keydown-F", this.handleFullscreenDown, this);
+    keyboard?.off("keyup-F", this.handleFullscreenUp, this);
     this.input.off("pointerdown", this.handlePointerAttack, this);
+    window.removeEventListener("blur", this.handleWindowBlur);
+    document.removeEventListener("visibilitychange", this.handleVisibilityChange);
+    this.settingsUnsubscribe?.();
+    this.settingsUnsubscribe = undefined;
+    this.pauseOverlay?.destroy();
+    this.settingsOverlay?.destroy();
+    this.fieldManual?.destroy();
+    this.presentationModal = NO_PRESENTATION_MODAL;
     this.cursors = undefined;
     this.wasd = undefined;
     this.interactionKey = undefined;

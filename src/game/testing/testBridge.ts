@@ -102,6 +102,32 @@ export interface E2ESnapshot {
   readonly cumulativeStatistics: GameSceneSnapshot["cumulativeStatistics"] | null;
   readonly currentFloorStatistics: GameSceneSnapshot["currentFloorStatistics"] | null;
   readonly completedFloorSummaries: GameSceneSnapshot["completedFloorSummaries"];
+  readonly presentationSettings: GameSceneSnapshot["presentationSettings"] | null;
+  readonly effectiveReducedMotion: boolean | null;
+  readonly effectiveScreenShake: boolean | null;
+  readonly highContrast: boolean | null;
+  readonly largeText: boolean | null;
+  readonly presentationModalKind: GameSceneSnapshot["presentationModalKind"] | null;
+  readonly pauseOverlayVisible: boolean | null;
+  readonly settingsOverlayVisible: boolean | null;
+  readonly fieldManualVisible: boolean | null;
+  readonly firstRunOnboardingActive: boolean | null;
+  readonly onboardingComplete: boolean | null;
+  readonly simulationPaused: boolean | null;
+  readonly physicsPaused: boolean | null;
+  readonly floorTimerPaused: boolean | null;
+  readonly runTimerPaused: boolean | null;
+  readonly audioSupported: boolean | null;
+  readonly audioUnlocked: boolean | null;
+  readonly audioMuted: boolean | null;
+  readonly currentAmbienceId: string | null;
+  readonly activeAmbienceCount: number | null;
+  readonly activeEffectVoiceCount: number | null;
+  readonly peakEffectVoiceCount: number | null;
+  readonly activeTransientEffectCount: number | null;
+  readonly peakTransientEffectCount: number | null;
+  readonly lowHealthPresentationVisible: boolean | null;
+  readonly enemyHealthBarVisibleCount: number | null;
 }
 
 export interface DungeonEscapeE2EBridge {
@@ -222,6 +248,32 @@ export function installE2EBridge(game: Phaser.Game): void {
         cumulativeStatistics: gameSnapshot?.cumulativeStatistics ?? null,
         currentFloorStatistics: gameSnapshot?.currentFloorStatistics ?? null,
         completedFloorSummaries: gameSnapshot?.completedFloorSummaries ?? [],
+        presentationSettings: gameSnapshot?.presentationSettings ?? null,
+        effectiveReducedMotion: gameSnapshot?.effectiveReducedMotion ?? null,
+        effectiveScreenShake: gameSnapshot?.effectiveScreenShake ?? null,
+        highContrast: gameSnapshot?.highContrast ?? null,
+        largeText: gameSnapshot?.largeText ?? null,
+        presentationModalKind: gameSnapshot?.presentationModalKind ?? null,
+        pauseOverlayVisible: gameSnapshot?.pauseOverlayVisible ?? null,
+        settingsOverlayVisible: gameSnapshot?.settingsOverlayVisible ?? null,
+        fieldManualVisible: gameSnapshot?.fieldManualVisible ?? null,
+        firstRunOnboardingActive: gameSnapshot?.firstRunOnboardingActive ?? null,
+        onboardingComplete: gameSnapshot?.onboardingComplete ?? null,
+        simulationPaused: gameSnapshot?.simulationPaused ?? null,
+        physicsPaused: gameSnapshot?.physicsPaused ?? null,
+        floorTimerPaused: gameSnapshot?.floorTimerPaused ?? null,
+        runTimerPaused: gameSnapshot?.runTimerPaused ?? null,
+        audioSupported: gameSnapshot?.audioSupported ?? null,
+        audioUnlocked: gameSnapshot?.audioUnlocked ?? null,
+        audioMuted: gameSnapshot?.audioMuted ?? null,
+        currentAmbienceId: gameSnapshot?.currentAmbienceId ?? null,
+        activeAmbienceCount: gameSnapshot?.activeAmbienceCount ?? null,
+        activeEffectVoiceCount: gameSnapshot?.activeEffectVoiceCount ?? null,
+        peakEffectVoiceCount: gameSnapshot?.peakEffectVoiceCount ?? null,
+        activeTransientEffectCount: gameSnapshot?.activeTransientEffectCount ?? null,
+        peakTransientEffectCount: gameSnapshot?.peakTransientEffectCount ?? null,
+        lowHealthPresentationVisible: gameSnapshot?.lowHealthPresentationVisible ?? null,
+        enemyHealthBarVisibleCount: gameSnapshot?.enemyHealthBarVisibleCount ?? null,
       };
     },
     teleportToTarget: (target): void => {

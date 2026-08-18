@@ -20,6 +20,8 @@ interface DungeonHudFloorDetails {
   readonly floorName: string;
   readonly runSeed: string;
   readonly accentColor: string;
+  readonly highContrast?: boolean;
+  readonly largeText?: boolean;
 }
 
 export class DungeonHud {
@@ -34,6 +36,8 @@ export class DungeonHud {
   private readonly chestsText: Phaser.GameObjects.Text;
   private readonly upgradesText: Phaser.GameObjects.Text;
   private readonly buildText: Phaser.GameObjects.Text;
+  private readonly plate: Phaser.GameObjects.Rectangle;
+  private readonly importantTexts: readonly Phaser.GameObjects.Text[];
   private displayedSeconds = "";
   private displayedEnemyCount = "";
   private displayedDash = "";
@@ -52,10 +56,14 @@ export class DungeonHud {
     },
   ) {
     const container = scene.add.container(22, 20).setScrollFactor(0).setDepth(50);
-    const plate = scene.add
+    this.plate = scene.add
       .rectangle(0, 0, 700, 158, 0x080b0d, 0.86)
       .setOrigin(0)
-      .setStrokeStyle(1, 0xb88c52, 0.42);
+      .setStrokeStyle(
+        floorDetails.highContrast ? 3 : 1,
+        0xb88c52,
+        floorDetails.highContrast ? 0.9 : 0.42,
+      );
     const title = scene.add.text(
       16,
       11,
@@ -175,8 +183,17 @@ export class DungeonHud {
         letterSpacing: 0.7,
       })
       .setOrigin(1, 0);
+    this.importantTexts = Object.freeze([
+      title,
+      this.timerText,
+      this.objectiveText,
+      this.keyText,
+      this.shardsText,
+      this.upgradesText,
+      this.buildText,
+    ]);
     container.add([
-      plate,
+      this.plate,
       title,
       this.timerText,
       seed,
@@ -200,6 +217,20 @@ export class DungeonHud {
       maximumHealth: 5,
       invulnerabilityRemainingMs: 0,
       hitStunRemainingMs: 0,
+    });
+    this.applyPresentation(floorDetails.highContrast === true, floorDetails.largeText === true);
+  }
+
+  public applyPresentation(highContrast: boolean, largeText: boolean): void {
+    this.plate.setStrokeStyle(
+      highContrast ? 3 : 1,
+      highContrast ? 0xf0c57e : 0xb88c52,
+      highContrast ? 0.92 : 0.42,
+    );
+    this.importantTexts.forEach((text) => {
+      const normal = text === this.buildText ? 8 : text === this.timerText ? 11 : 10;
+      text.setFontSize(Math.round(normal * (largeText ? 1.14 : 1)));
+      text.setStroke("#040607", highContrast ? 2 : 0);
     });
   }
 

@@ -1,13 +1,39 @@
 import Phaser from "phaser";
 
+import { AUDIO_DIRECTOR_REGISTRY_KEY, AudioDirector } from "../audio/AudioDirector";
+import { AUDIO_EFFECT_IDS, FLOOR_AMBIENCE_IDS } from "../audio/config";
 import { SCENE_KEYS, TEXTURE_KEYS } from "../constants";
+import {
+  PRESENTATION_RUNTIME_REGISTRY_KEY,
+  PresentationRuntime,
+} from "../presentation/PresentationRuntime";
 
 export class BootScene extends Phaser.Scene {
   public constructor() {
     super(SCENE_KEYS.BOOT);
   }
 
+  public preload(): void {
+    [...FLOOR_AMBIENCE_IDS, ...AUDIO_EFFECT_IDS].forEach((id) => {
+      this.load.audio(id, `/audio/${id}.wav`);
+    });
+  }
+
   public create(): void {
+    let storage: Storage | undefined;
+    try {
+      storage = typeof window === "undefined" ? undefined : window.localStorage;
+    } catch {
+      storage = undefined;
+    }
+    const prefersReducedMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const presentation = new PresentationRuntime(storage, prefersReducedMotion);
+    const audio = new AudioDirector(this.game, presentation.getSettings());
+    presentation.subscribe((settings) => audio.applySettings(settings));
+    this.registry.set(PRESENTATION_RUNTIME_REGISTRY_KEY, presentation);
+    this.registry.set(AUDIO_DIRECTOR_REGISTRY_KEY, audio);
     this.createFloorTexture();
     this.createStoneTexture();
     this.createPlayerTexture();

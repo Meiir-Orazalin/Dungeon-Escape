@@ -179,6 +179,14 @@ Enemy damage remains one. Wisp telegraph remains `350 ms`; Warden wind-up remain
 
 Windstep Sigil affects only ordinary player movement (`1.15`). Stalwart Rune affects only player hit stun (`130 → 90 ms`) and knockback duration (`120 → 80 ms`). Enemies remain optional, the gate never requires clearance, and there is no boss. These later additions do not retroactively change Phase 4 or Phase 5 release behavior.
 
-## Intentionally deferred after Phase 6
+## Phase 7 integration
 
-Bosses, traps, experience, equipment, multiple weapons, audio, score, persistence, and network play remain unimplemented.
+Phase 7 adds one bounded pacing state after first room discovery. Every living enemy becomes visible but remains unable to move, contact-damage, telegraph, fire, wind up, charge, or attack for exactly `450 ms`. The grace is consumed once per enemy/floor attempt even if the player leaves; current-floor replay and all fresh floor/run paths recreate eligibility. It is runtime state only and does not change `EncounterPlan` or `ec-xxxxxxxx`.
+
+Each enemy owns one non-physics health bar that is hidden while dormant, visible while engaged or for `1.5 seconds` after accepted damage, wider for Stone Wardens, and removed on death/cleanup. Health `2` or below adds a visual low-health presentation; healing above two clears it. These are presentation states, not combat modifiers.
+
+All base stats remain unchanged. Enemy damage is still `1`, Wisp telegraph `350 ms`, Warden wind-up `550 ms`, and the three Phase 6 depth profiles retain their exact values. No new enemy archetype, objective, loot, upgrade, boss, or trap exists.
+
+## Intentionally deferred after Phase 7
+
+Bosses, traps, experience, equipment, multiple weapons, score, run persistence, controller support, and network play remain unimplemented.

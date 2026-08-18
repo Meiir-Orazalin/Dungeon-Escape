@@ -32,6 +32,10 @@ These instructions apply to the entire Dungeon Escape repository.
 - Preserve the meanings of layout, objective, encounter, and loot fingerprints; the run fingerprint is a separate contract.
 - Carry selected upgrades and available shards between floors, but restore the entry checkpoint on active-run `R` and restart the full run on terminal `R`.
 - Do not add run persistence or expose E2E bridge code in production.
+- Keep audio original, generated, local, and covered by both audio and production audits.
+- Presentation settings may persist, but run progress must never persist.
+- Reduced motion suppresses shake and nonessential motion; Pause must preserve the exact runtime.
+- Keep `chunkSizeWarningLimit` at 1,500 kB and report bundle warnings rather than hiding them.
 
 ## Documentation
 

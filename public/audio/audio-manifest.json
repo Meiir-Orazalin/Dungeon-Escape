@@ -1,0 +1,247 @@
+{
+  "contractVersion": 1,
+  "files": [
+    {
+      "id": "ambience-catacombs",
+      "path": "audio/ambience-catacombs.wav",
+      "kind": "ambience",
+      "sampleRate": 22050,
+      "channelCount": 1,
+      "bitsPerSample": 16,
+      "duration": 10.5,
+      "byteSize": 463094,
+      "sha256": "90e75753b8ea8dd139ae65d074b169e4cd31dd748da0e9979549fb8e2861e650"
+    },
+    {
+      "id": "ambience-ember-vaults",
+      "path": "audio/ambience-ember-vaults.wav",
+      "kind": "ambience",
+      "sampleRate": 22050,
+      "channelCount": 1,
+      "bitsPerSample": 16,
+      "duration": 11,
+      "byteSize": 485144,
+      "sha256": "255499267aa32a43941dccae1957276b236c80af25fa255a8cdd4529960a4d59"
+    },
+    {
+      "id": "ambience-obsidian-sanctum",
+      "path": "audio/ambience-obsidian-sanctum.wav",
+      "kind": "ambience",
+      "sampleRate": 22050,
+      "channelCount": 1,
+      "bitsPerSample": 16,
+      "duration": 11.5,
+      "byteSize": 507194,
+      "sha256": "57fda06d93d9b453386c22668c725fa1128c681c2e0979546b0cf545ea12eec6"
+    },
+    {
+      "id": "ui-focus",
+      "path": "audio/ui-focus.wav",
+      "kind": "effect",
+      "sampleRate": 22050,
+      "channelCount": 1,
+      "bitsPerSample": 16,
+      "duration": 0.1,
+      "byteSize": 4454,
+      "sha256": "e2504648bf0aba56310ed6576cb74256567c29a57ce10ffb4a48c5b3ccd06c5f"
+    },
+    {
+      "id": "ui-confirm",
+      "path": "audio/ui-confirm.wav",
+      "kind": "effect",
+      "sampleRate": 22050,
+      "channelCount": 1,
+      "bitsPerSample": 16,
+      "duration": 0.16,
+      "byteSize": 7100,
+      "sha256": "8643d2916fa252b4e4954011811bad62d35557fd475919ab3a6f5251b357bad5"
+    },
+    {
+      "id": "ui-back",
+      "path": "audio/ui-back.wav",
+      "kind": "effect",
+      "sampleRate": 22050,
+      "channelCount": 1,
+      "bitsPerSample": 16,
+      "duration": 0.14,
+      "byteSize": 6218,
+      "sha256": "99c4e4a90806ffc384f6096f2063b3a354594645f47cfb74e13f33e3604c4d07"
+    },
+    {
+      "id": "sword-swing",
+      "path": "audio/sword-swing.wav",
+      "kind": "effect",
+      "sampleRate": 22050,
+      "channelCount": 1,
+      "bitsPerSample": 16,
+      "duration": 0.26,
+      "byteSize": 11510,
+      "sha256": "291744bec1ade007afca3040cac98562ec59df040cc0fed609d9e998818bc3ce"
+    },
+    {
+      "id": "dash",
+      "path": "audio/dash.wav",
+      "kind": "effect",
+      "sampleRate": 22050,
+      "channelCount": 1,
+      "bitsPerSample": 16,
+      "duration": 0.28,
+      "byteSize": 12392,
+      "sha256": "65a45b8d366f4ff910c8c4b8e842e7c19a1adbb53523460c16f5677bbaacb888"
+    },
+    {
+      "id": "enemy-hit",
+      "path": "audio/enemy-hit.wav",
+      "kind": "effect",
+      "sampleRate": 22050,
+      "channelCount": 1,
+      "bitsPerSample": 16,
+      "duration": 0.22,
+      "byteSize": 9746,
+      "sha256": "25eb3cbc16133e60120e5be6b700752a22856d4424eadc015676b6b894e869a8"
+    },
+    {
+      "id": "enemy-defeat",
+      "path": "audio/enemy-defeat.wav",
+      "kind": "effect",
+      "sampleRate": 22050,
+      "channelCount": 1,
+      "bitsPerSample": 16,
+      "duration": 0.34,
+      "byteSize": 15038,
+      "sha256": "eae048c35b4a153eeb283b0de88ef9065c81a91c6baf50a83f6e3e81a1f3e70d"
+    },
+    {
+      "id": "player-hit",
+      "path": "audio/player-hit.wav",
+      "kind": "effect",
+      "sampleRate": 22050,
+      "channelCount": 1,
+      "bitsPerSample": 16,
+      "duration": 0.3,
+      "byteSize": 13274,
+      "sha256": "4a06206ec50f042f8170cacf0ac589fc3d0b03ecea523897ccb7a5e7cb330ad7"
+    },
+    {
+      "id": "key-collected",
+      "path": "audio/key-collected.wav",
+      "kind": "effect",
+      "sampleRate": 22050,
+      "channelCount": 1,
+      "bitsPerSample": 16,
+      "duration": 0.54,
+      "byteSize": 23858,
+      "sha256": "7507d04136663558013f0cf7518758d1563481b0e6d85b8694d06e1709fddaaf"
+    },
+    {
+      "id": "gate-sealed",
+      "path": "audio/gate-sealed.wav",
+      "kind": "effect",
+      "sampleRate": 22050,
+      "channelCount": 1,
+      "bitsPerSample": 16,
+      "duration": 0.58,
+      "byteSize": 25622,
+      "sha256": "b392fff236447c0ad188aa2b5148ebceba7a75e7452f59764e2a5205f07c7d24"
+    },
+    {
+      "id": "gate-ready",
+      "path": "audio/gate-ready.wav",
+      "kind": "effect",
+      "sampleRate": 22050,
+      "channelCount": 1,
+      "bitsPerSample": 16,
+      "duration": 0.72,
+      "byteSize": 31796,
+      "sha256": "73d6b5a71df22f6ef774401cfb718e4050f42f5c1608962ffa2be773cfb60eb8"
+    },
+    {
+      "id": "chest-open",
+      "path": "audio/chest-open.wav",
+      "kind": "effect",
+      "sampleRate": 22050,
+      "channelCount": 1,
+      "bitsPerSample": 16,
+      "duration": 0.48,
+      "byteSize": 21212,
+      "sha256": "ec9b9506ad77cadc1faea41803cf3238cddefc59632d09516b1c226ba91ffde5"
+    },
+    {
+      "id": "shard-collected",
+      "path": "audio/shard-collected.wav",
+      "kind": "effect",
+      "sampleRate": 22050,
+      "channelCount": 1,
+      "bitsPerSample": 16,
+      "duration": 0.18,
+      "byteSize": 7982,
+      "sha256": "ea947ac9314cfb3013e28e029d6f7a7de6ecfc5cd9841cc0ce2c187166c01f7f"
+    },
+    {
+      "id": "flask-heal",
+      "path": "audio/flask-heal.wav",
+      "kind": "effect",
+      "sampleRate": 22050,
+      "channelCount": 1,
+      "bitsPerSample": 16,
+      "duration": 0.5,
+      "byteSize": 22094,
+      "sha256": "054275ef6ae588c1f84cf04d967d5a8bb775b87caeb5e88804a4a8f80d764359"
+    },
+    {
+      "id": "forge-ready",
+      "path": "audio/forge-ready.wav",
+      "kind": "effect",
+      "sampleRate": 22050,
+      "channelCount": 1,
+      "bitsPerSample": 16,
+      "duration": 0.78,
+      "byteSize": 34442,
+      "sha256": "dfd08386f66d3ec06a7f58a66089742d4f601932673786985a177f6c6833ff6f"
+    },
+    {
+      "id": "upgrade-selected",
+      "path": "audio/upgrade-selected.wav",
+      "kind": "effect",
+      "sampleRate": 22050,
+      "channelCount": 1,
+      "bitsPerSample": 16,
+      "duration": 0.85,
+      "byteSize": 37530,
+      "sha256": "a8d4f3c117754812b3a6051adedb8360412cbf4cb7a0bf4b2c2322bb9b01bd15"
+    },
+    {
+      "id": "floor-cleared",
+      "path": "audio/floor-cleared.wav",
+      "kind": "effect",
+      "sampleRate": 22050,
+      "channelCount": 1,
+      "bitsPerSample": 16,
+      "duration": 0.92,
+      "byteSize": 40616,
+      "sha256": "a5cb314009934fcaf58e91be51be36d4f854d2951308282cc5c74bf50e809821"
+    },
+    {
+      "id": "run-victory",
+      "path": "audio/run-victory.wav",
+      "kind": "effect",
+      "sampleRate": 22050,
+      "channelCount": 1,
+      "bitsPerSample": 16,
+      "duration": 1.35,
+      "byteSize": 59580,
+      "sha256": "153da033b2efdc3cd207f55a61563bcf1ee096ba034d28be8c767d7de84c9c40"
+    },
+    {
+      "id": "run-defeat",
+      "path": "audio/run-defeat.wav",
+      "kind": "effect",
+      "sampleRate": 22050,
+      "channelCount": 1,
+      "bitsPerSample": 16,
+      "duration": 1.2,
+      "byteSize": 52964,
+      "sha256": "6541484586021e76419e578838260579f65196251f7aa77d99484137a1c08740"
+    }
+  ]
+}

@@ -86,6 +86,9 @@ test("canonical document metadata and public assets are production-ready", async
     "/social-preview.png",
     "/robots.txt",
     "/sitemap.xml",
+    "/audio/audio-manifest.json",
+    "/audio/ambience-catacombs.wav",
+    "/audio/ui-confirm.wav",
   ]) {
     const assetResponse = await request.get(asset);
     expect(assetResponse.ok(), asset).toBe(true);
@@ -105,8 +108,12 @@ test("fixed-seed production startup remains playable without page scrolling", as
   expect(box?.width ?? 0).toBeGreaterThan(0);
   expect(box?.height ?? 0).toBeGreaterThan(0);
   await expect(page.locator("#game-state")).toContainText("Main menu");
+  await expect(page.locator("#game-state")).toContainText("How to Play");
+  await expect(page.locator("#game-state")).toContainText("Settings");
   await page.keyboard.press("Enter");
-  await expect(page.locator("#game-state")).toContainText("Three-floor run ready");
+  await expect(page.locator("#game-state")).toContainText("First-run onboarding");
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#game-state")).toContainText("Onboarding complete");
 
   const currentUrl = new URL(page.url());
   expect(currentUrl.protocol).toBe("https:");
@@ -175,6 +182,11 @@ test("production excludes test bridges, localhost resources, mixed content, and 
   expect(resources.some((url) => url.includes("localhost") || url.includes("127.0.0.1"))).toBe(
     false,
   );
+  expect(
+    resources
+      .filter((url) => url.includes("/audio/"))
+      .some((url) => new URL(url).origin !== "https://meiirorazalin.com"),
+  ).toBe(false);
   await expect(page.locator("vite-error-overlay")).toHaveCount(0);
   expectCleanDiagnostics(diagnostics);
 });

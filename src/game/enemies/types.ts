@@ -2,6 +2,7 @@ import type { Vector2 } from "../combat/types";
 
 export type EnemyReadableState =
   | "dormant"
+  | "awakening"
   | "idle"
   | "chase"
   | "approach"
