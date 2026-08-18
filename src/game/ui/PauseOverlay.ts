@@ -17,6 +17,7 @@ export class PauseOverlay {
   private readonly container: Phaser.GameObjects.Container;
   private readonly zones: Phaser.GameObjects.Zone[] = [];
   private destroyed = false;
+  private inputRegistrationTimer?: number;
   private muteHeld = false;
   private fullscreenHeld = false;
 
@@ -112,18 +113,23 @@ export class PauseOverlay {
       )
       .setOrigin(0.5);
     this.container.add(quick);
-    // The overlay can be constructed from GameScene's keydown-ESC listener. Defer
-    // registration so this overlay cannot consume that same opening event and
-    // immediately resume on EventEmitter implementations that visit new listeners.
-    queueMicrotask(() => {
+    // The overlay can be constructed while Phaser is dispatching the key event
+    // that opened Pause or closed a child modal. Register in the next browser
+    // task so no engine can deliver that same event to the new Pause listener.
+    this.inputRegistrationTimer = window.setTimeout(() => {
+      this.inputRegistrationTimer = undefined;
       if (!this.destroyed) this.registerInput();
-    });
+    }, 0);
     scene.events.once(Phaser.Scenes.Events.SHUTDOWN, this.destroy, this);
   }
 
   public destroy(): void {
     if (this.destroyed) return;
     this.destroyed = true;
+    if (this.inputRegistrationTimer !== undefined) {
+      window.clearTimeout(this.inputRegistrationTimer);
+      this.inputRegistrationTimer = undefined;
+    }
     this.unregisterInput();
     this.zones.forEach((zone) => zone.removeAllListeners());
     this.container.destroy(true);
