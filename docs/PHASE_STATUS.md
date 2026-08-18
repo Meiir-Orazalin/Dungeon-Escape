@@ -7,8 +7,10 @@
 - **State:** Complete, locally verified, deployed, and independently live-verified; the annotated tag and GitHub Release follow only after this record is deployed.
 - **Canonical production URL:** `https://meiirorazalin.com/`
 - **Phase 8 implementation:** `bed9742fc64af743bb5f627bbf7a8f9c9cb19d00`
-- **Focused fix:** `d35763444c1f28f3e39c0defc1db4f8d20889a4c` — wait for `MenuScene` readiness before reload/fallback keyboard-start assertions on a slower Linux WebKit runner.
-- **Verification record:** this documentation commit; its own SHA is intentionally not embedded inside itself.
+- **Focused fixes:**
+  - `d35763444c1f28f3e39c0defc1db4f8d20889a4c` — wait for `MenuScene` readiness before reload/fallback keyboard-start assertions on a slower Linux WebKit runner.
+  - `f497615b111d0688c2dcc0f5a499917b003e5e4a` — register a reconstructed Pause overlay on the next browser task so WebKit cannot deliver a child-overlay closing Escape event to its new listener.
+- **Verification record:** `f99a36efdebec234a8ad95308bd5cf5a3f9a9905`; this final post-fix documentation update does not embed its own SHA.
 - **Published Phase 7 baseline:** annotated `v0.7.0` at `7dc2c37c53cf2d7fbd1b0eea0908229ad388fd8a`
 
 Phase 8 adds release hardening only. The five-seed Phase 7 fixture preserved five run fingerprints, fifteen floor seeds, and sixty floor-local layout/objective/encounter/loot fingerprints exactly. The game remains exactly three floors with eight upgrades and unchanged combat, difficulty, loot, carry, checkpoint, presentation, audio, pause, settings, and `450 ms` awakening contracts.
@@ -53,7 +55,7 @@ LIVE_BASE_URL=https://meiirorazalin.com pnpm test:live:matrix
 - Unit: `316 / 316` across `20` files.
 - Planning compatibility: `5 / 5` run seeds, `15 / 15` floor seeds, and `60 / 60` subsystem fingerprints exact.
 - Deep Chromium: `43 / 43`.
-- Core browser matrix: `7 / 7` Chromium, `7 / 7` Firefox, `7 / 7` WebKit. The readiness correction additionally passed `21 / 21` across three repeated WebKit runs.
+- Core browser matrix: `7 / 7` Chromium, `7 / 7` Firefox, `7 / 7` WebKit. The readiness correction additionally passed `21 / 21` across three repeated WebKit runs; the Pause event-loop correction passed `10 / 10` targeted WebKit stress runs.
 - Forced Canvas: `12 / 12` with renderer, Menu, run start, movement, pointer attack, Pause, Settings, key/gate, floor transition, resize, and diagnostics covered.
 - Lifecycle soak: `1 / 1` in `12.3 s`; ten Pause/Resume cycles, five Settings cycles, five Manual cycles, ten mute toggles, three fullscreen attempts, three viewports, combat/awakening, chest/pickup, forge, floor transition, three replays, and three new runs stayed within listener/object/audio/effect bounds.
 - Live matrix: `5 / 5` per engine (`15 / 15`) in the independent post-deploy run.
@@ -63,11 +65,11 @@ LIVE_BASE_URL=https://meiirorazalin.com pnpm test:live:matrix
 
 ## Budgets and production artifact
 
-- Application JavaScript: `209,410` bytes minified / `54,991` gzip (budget `300,000`).
+- Application JavaScript: `209,625` bytes minified / `55,049` gzip (budget `300,000`).
 - Phaser vendor JavaScript: `1,374,829` bytes minified / `355,968` gzip (budget `1,450,000`).
-- Total JavaScript: `1,584,239` bytes minified / `410,959` gzip (gzip budget `450,000`).
+- Total JavaScript: `1,584,454` bytes minified / `411,017` gzip (gzip budget `450,000`).
 - Audio: `1,892,860` bytes (budget `3,500,000`).
-- Total deployed site: `3,859,750` bytes (budget `6,500,000`).
+- Total deployed site: `3,859,965` bytes (budget `6,500,000`).
 - Largest non-audio file: Phaser vendor at `1,374,829` bytes (budget `1,500,000`).
 - Runtime limits: ten SFX voices, one ambience, 96 normal/48 reduced-motion transient effects.
 - `chunkSizeWarningLimit` remains `1,500` kB. No Vite chunk warning remains because the isolated Phaser chunk is below it.
@@ -78,6 +80,9 @@ LIVE_BASE_URL=https://meiirorazalin.com pnpm test:live:matrix
 - Post-fix Quality `32132913283` / job `95697769522`: success.
 - Post-fix Deploy Production `32132913292`: success. Verify and deploy job `95697769569` passed every release gate and deployed in `12m16s`.
 - Live production browser matrix job `95700918346`: success in `1m23s`, with five bridge-free tests per engine.
+- Verification-record Quality `32135386005`: success. Deploy `32135386071` stopped before artifact upload when Linux WebKit exposed same-Escape delivery from Settings into a newly reconstructed Pause overlay.
+- Pause event-loop fix Quality `32137124410` / job `95710966135`: success.
+- Pause event-loop fix Deploy Production `32137124419`: success. Verify and deploy job `95710966386` passed every release gate and deployed in `12m18s`; live matrix job `95714465817` then passed in `1m36s`.
 - Local/live visual review passed at `1440 × 900`, `1024 × 640`, `960 × 540`, `720 × 700`, and `390 × 844` across Chromium WebGL, Chromium Canvas, Firefox, and WebKit. Menu, onboarding, Settings, Manual, Pause, active play, floor presentation, responsive framing, version display, and fatal renderer guidance showed no clipping, stale state, accidental scroll, or horizontal overflow.
 - Production review at `https://meiirorazalin.com/?seed=v1-production-review` showed `v1.0.0`, successful real run start, correct Chromium/Firefox/WebKit rendering, reachable local audio, no mixed content, no external runtime request, and no production bridge, Canvas override, or lifecycle diagnostics.
 - Production architecture remains root-based Vite, dist-only workflow Pages deployment from `main`, canonical `meiirorazalin.com`, enforced HTTPS, and `PRODUCTION_DOMAIN_READY=true`; DNS, Pages, certificate, homepage, and repository variables were not changed.
