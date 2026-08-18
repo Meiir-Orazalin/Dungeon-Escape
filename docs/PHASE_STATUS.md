@@ -1,13 +1,13 @@
 # Phase Status
 
-## Current release candidate
+## Current release
 
 - **Version:** `v0.6.0`
 - **Phase:** Phase 6 — Complete Deterministic Three-Floor Run
-- **State:** Implementation complete; production deployment verification pending
+- **State:** Complete, verified, deployed, and ready to publish
 - **Canonical production URL:** `https://meiirorazalin.com/`
-- **Phase 6 implementation commit:** pending creation by the verified release flow
-- **Focused verification fixes:** none at this stage
+- **Phase 6 implementation commit:** `f72869c0a2c80970e389a8a3e1ace5ab09e61910`
+- **Focused verification fix:** `6ad2f7428b5dc01cfd727815f8b6628b2f1f6bc6` — aligned the bridge-free live suite with intentional Phase 6 metadata/startup copy and extended its teleport-global checks
 
 The implementation preserves the existing GitHub Pages architecture: explicit Vite base `/`, `dist`-only workflow deployment from `main`, canonical custom domain, enforced HTTPS, and readiness-gated bridge-free live smoke. No DNS, Pages, certificate, homepage, or repository-variable changes are required.
 
@@ -52,15 +52,28 @@ pnpm check
 git diff --check
 ```
 
-Current evidence before the final release gate:
+Final verified evidence:
 
 - Unit tests: 17 files and 277 tests passed, including 100 RunPlans / 300 floor bundles.
 - Local Chromium: 38 tests passed, including real three-floor progression, checkpoint replay from gameplay and Runeforge selection, new-run routing from Runeforge selection, victory, Floor 2 defeat, carry behavior, and production-bridge isolation.
 - Production audit: 47 assertions passed across 10 deployed files.
 - Production build: passed; minified main JavaScript was `1,535.11 kB` (`400.13 kB` gzip) and retained Vite's existing advisory above the configured `1,500 kB` warning threshold.
-- Baseline live smoke: 5 bridge-free Chromium tests passed before implementation.
+- Live Chromium: 5 bridge-free tests passed after production deployment, covering metadata/assets, fixed-seed startup, HTTP-to-HTTPS, `www` query-preserving redirect, and production isolation.
 - Formatting, ESLint, and strict TypeScript passed. Local visual review covered all three themes, Floor Cleared, Runeforge cards including Windstep/Stalwart, victory, defeat, and the `720 × 700` narrow layout with no page scrolling, clipping, page errors, or failed assets.
-- Final live smoke, workflow IDs, and production deployment will be recorded after their required release runs.
+- Live visual review at `https://meiirorazalin.com/?seed=phase6-production-review` confirmed the three-floor menu, real Enter startup, Floor 1 theme/HUD, valid canonical HTTPS, a `641.25 × 358.703125` canvas at the `720 × 700` viewport, no scrolling, no page/console/request errors, no mixed/localhost resources, no development overlay, and no production E2E bridge.
+
+## Production verification
+
+- Implementation Quality run `32097555904`: success.
+- Implementation Deploy Production run `32097555890`: **Verify and deploy** job `95591737187` succeeded and published the application; its first live-smoke job `95593029150` accurately failed because two stable assertions still expected Phase 5 public copy.
+- Focused-fix Quality run `32098337581`: success; job `95593879437`.
+- Corrected Deploy Production run `32098337586`: success.
+  - **Verify and deploy** job `95593879496`: success, including 38 local Chromium tests, artifact audit, and GitHub Pages deployment.
+  - **Live production smoke** job `95595194423`: success; all 5 bridge-free tests passed.
+- Independent post-deploy `LIVE_BASE_URL=https://meiirorazalin.com pnpm test:live`: 5 passed.
+- GitHub Pages remained `build_type: workflow`, `cname: meiirorazalin.com`, `protected_domain_state: verified`, certificate `approved`, and `https_enforced: true` with `html_url: https://meiirorazalin.com/`.
+- Repository variables remained `PRODUCTION_URL=https://meiirorazalin.com` and `PRODUCTION_DOMAIN_READY=true`; repository homepage remained the canonical URL.
+- The root deployment served Phase 6 metadata and startup copy; HTTP and `www` redirects, query preservation, and canonical host behavior passed the live suite.
 
 ## Known limitations and deferred scope
 
@@ -72,7 +85,7 @@ Current evidence before the final release gate:
 
 ## Release intent and historical tags
 
-After implementation deployment, live verification, the final verification-record commit, and successful final workflows, annotated tag `v0.6.0` will point to final `main` with message `Phase 6: complete deterministic three-floor run`.
+After this verification record is deployed and its final workflows pass, annotated tag `v0.6.0` will point to final `main` with message `Phase 6: complete deterministic three-floor run`.
 
 Published historical targets must remain unchanged:
 
