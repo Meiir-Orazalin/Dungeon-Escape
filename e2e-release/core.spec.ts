@@ -58,6 +58,7 @@ test("boots, reports v1, starts without Space leakage, and preserves the fixed p
   expect(first.playerPosition).toEqual(expect.any(Object));
   await page.reload();
   await page.waitForFunction(() => Boolean((window as BridgeWindow).__DUNGEON_ESCAPE_E2E__));
+  await expect.poll(async () => (await snapshot(page)).activeScene).toBe("MenuScene");
   await page.keyboard.press("Space");
   await expect.poll(async () => (await snapshot(page)).activeScene).toBe("GameScene");
   expect((await snapshot(page)).runFingerprint).toBe(first.runFingerprint);
@@ -120,6 +121,7 @@ test("survives denied storage, mute, fullscreen rejection, and focus loss", asyn
   });
   await page.goto("/?seed=v1-fallback-matrix");
   await page.waitForFunction(() => Boolean((window as BridgeWindow).__DUNGEON_ESCAPE_E2E__));
+  await expect.poll(async () => (await snapshot(page)).activeScene).toBe("MenuScene");
   await page.keyboard.press("Enter");
   await expect.poll(async () => (await snapshot(page)).activeScene).toBe("GameScene");
   if ((await snapshot(page)).presentationModalKind === "manual") {
