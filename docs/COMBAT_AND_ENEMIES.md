@@ -167,6 +167,18 @@ E2E mode retains `teleportToTarget` and adds only:
 
 Neither action changes health, attacks, cooldowns, objective state, outcome, or enemy state. Playwright must use real input and collision callbacks. Production assets are audited to exclude `__DUNGEON_ESCAPE_E2E__`, `installE2EBridge`, `teleportToTarget`, `teleportNearEnemy`, and `teleportOntoEnemy`.
 
-## Intentionally deferred after Phase 5
+## Phase 6 integration
 
-Coins, experience, general inventories, equipment, weapon selection, upgrade ranks, levels, skill trees, multiple floors, transitions, bosses, difficulty scaling, traps, audio, pause menus, score, best times, persistence/save games, virtual controls, and network play are not implemented. Phase 5 rewards are run-only and reset with the floor.
+Phase 6 preserves `EncounterPlan` and `ec-xxxxxxxx` meaning. Each floor plans normal base enemies exactly as before; a separate immutable depth profile derives runtime maximum health, ordinary movement, non-telegraph action waits, Wisp projectile speed, and Warden charge speed from base constants.
+
+- Floor 1: exact base values.
+- Floor 2: `+1` maximum health, `1.08` movement, `0.92` cooldown, `1.10` Wisp projectile and Warden charge multipliers.
+- Floor 3: `+2` maximum health, `1.16` movement, `0.84` cooldown, `1.20` Wisp projectile and Warden charge multipliers.
+
+Enemy damage remains one. Wisp telegraph remains `350 ms`; Warden wind-up remains `550 ms`; charge duration, room-local AI, wall behavior, and rewards are unchanged. Re-derivation always begins from immutable base configuration, so replay and descent cannot compound difficulty.
+
+Windstep Sigil affects only ordinary player movement (`1.15`). Stalwart Rune affects only player hit stun (`130 → 90 ms`) and knockback duration (`120 → 80 ms`). Enemies remain optional, the gate never requires clearance, and there is no boss. These later additions do not retroactively change Phase 4 or Phase 5 release behavior.
+
+## Intentionally deferred after Phase 6
+
+Bosses, traps, experience, equipment, multiple weapons, audio, score, persistence, and network play remain unimplemented.

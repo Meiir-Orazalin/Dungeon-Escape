@@ -57,7 +57,7 @@ describe("run reward state", () => {
 
   it("opening and closing an offer spends nothing", () => {
     const ready = readyFirstForge();
-    const offer = createUpgradeOffer("lt-1234abcd", 0, []);
+    const offer = createUpgradeOffer("lt-1234abcd", 1, 0, []);
     const opened = openForgeOffer(ready, offer);
     expect(opened.state.availableShards).toBe(6);
     expect(opened.state.forge.status).toBe("choosing");
@@ -68,14 +68,14 @@ describe("run reward state", () => {
 
   it("spends six, advances to eight, then exhausts after the second selection", () => {
     const funded = collectShardPickup(createInitialRewardState(), "all-shards", 14).state;
-    const firstOffer = createUpgradeOffer("lt-1234abcd", 0, []);
+    const firstOffer = createUpgradeOffer("lt-1234abcd", 1, 0, []);
     const firstOpened = openForgeOffer(funded, firstOffer).state;
     const firstId = firstOffer.upgradeIds[0]!;
     const first = selectForgeUpgrade(firstOpened, firstId);
     expect(first.outcome).toBe("selected");
     expect(first.state.availableShards).toBe(8);
     expect(first.state.forge).toEqual({ status: "ready", cost: 8 });
-    const secondOffer = createUpgradeOffer("lt-1234abcd", 1, [firstId]);
+    const secondOffer = createUpgradeOffer("lt-1234abcd", 1, 1, [firstId]);
     const secondOpened = openForgeOffer(first.state, secondOffer).state;
     const second = selectForgeUpgrade(secondOpened, secondOffer.upgradeIds[0]!);
     expect(second.state.availableShards).toBe(0);
@@ -86,7 +86,7 @@ describe("run reward state", () => {
 
   it("rejects unaffordable, duplicate, invalid, and out-of-offer selections", () => {
     const ready = readyFirstForge();
-    const offer = createUpgradeOffer("lt-1234abcd", 0, []);
+    const offer = createUpgradeOffer("lt-1234abcd", 1, 0, []);
     const choosing = openForgeOffer(ready, offer).state;
     expect(() => selectForgeUpgrade(choosing, "not-an-upgrade")).toThrow(/Unknown/);
     const outside = [

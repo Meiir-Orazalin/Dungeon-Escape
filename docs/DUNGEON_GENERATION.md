@@ -124,3 +124,9 @@ Only discovered rooms are drawn. A corridor becomes visible when both endpoint r
 ## Intentionally deferred
 
 Phase 2 does not implement keys, an actionable exit, completion objectives, enemies, combat, health, damage, traps, loot, chests, potions, upgrades, multiple floors, victory, defeat, or audio. Those remain assigned to later phases.
+
+## Cross-phase use in Phase 6
+
+Phase 6 `RunPlan` holds three independently generated and validated layouts. Floor 1 passes the normalized URL run seed directly to the unchanged generator. Floors 2 and 3 pass pure versioned derived seeds. No room graph, coordinate space, corridor, collision body, or geometry is shared, and only the current floor is rendered.
+
+The original `dg-xxxxxxxx` fingerprint remains a floor-local structural contract. Theme and difficulty are separate RunPlan data and cannot change it. This later composition does not retroactively make multiple floors part of the Phase 2 release.

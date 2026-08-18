@@ -8,14 +8,18 @@ export interface HealingTransition {
 }
 
 export function createInitialVitality(
-  maximumHealth = COMBAT_CONFIG.playerMaximumHealth,
+  maximumHealth: number = COMBAT_CONFIG.playerMaximumHealth,
+  currentHealth: number = maximumHealth,
 ): PlayerVitality {
   if (!Number.isInteger(maximumHealth) || maximumHealth <= 0) {
     throw new RangeError("Maximum health must be a positive integer.");
   }
+  if (!Number.isInteger(currentHealth) || currentHealth <= 0 || currentHealth > maximumHealth) {
+    throw new RangeError("Current health must be a positive integer within maximum health.");
+  }
   return Object.freeze({
     status: "alive",
-    health: maximumHealth,
+    health: currentHealth,
     maximumHealth,
     invulnerabilityRemainingMs: 0,
     hitStunRemainingMs: 0,
@@ -27,6 +31,7 @@ export function applyPlayerDamage(
   damage: number,
   dashInvulnerable: boolean,
   postHitInvulnerabilityMs: number = COMBAT_CONFIG.postDamageInvulnerabilityMs,
+  hitStunMs: number = COMBAT_CONFIG.hitStunMs,
 ): DamageTransition {
   if (
     state.status === "defeated" ||
@@ -49,7 +54,7 @@ export function applyPlayerDamage(
       ...state,
       health,
       invulnerabilityRemainingMs: postHitInvulnerabilityMs,
-      hitStunRemainingMs: COMBAT_CONFIG.hitStunMs,
+      hitStunRemainingMs: hitStunMs,
     }),
     outcome: "accepted",
   });

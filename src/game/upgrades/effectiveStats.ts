@@ -15,10 +15,13 @@ export const BASE_PLAYER_STATS: EffectivePlayerStats = Object.freeze({
   dashCooldownMs: COMBAT_CONFIG.dashCooldownMs,
   maximumHealth: COMBAT_CONFIG.playerMaximumHealth,
   postHitInvulnerabilityMs: COMBAT_CONFIG.postDamageInvulnerabilityMs,
+  movementSpeedMultiplier: 1,
+  hitStunMs: COMBAT_CONFIG.hitStunMs,
+  playerKnockbackMs: COMBAT_CONFIG.playerKnockbackMs,
 });
 
 export function deriveEffectivePlayerStats(ids: readonly string[]): EffectivePlayerStats {
-  if (ids.length > 2) throw new RangeError("Phase 5 supports at most two selected upgrades.");
+  if (ids.length > 6) throw new RangeError("A three-floor run supports at most six upgrades.");
   if (new Set(ids).size !== ids.length)
     throw new RangeError("Selected upgrade IDs must be unique.");
   if (!ids.every(isUpgradeId)) throw new RangeError("Selected upgrades contain an unknown ID.");
@@ -34,6 +37,9 @@ export function deriveEffectivePlayerStats(ids: readonly string[]): EffectivePla
     postHitInvulnerabilityMs: selected.has("aegis-rune")
       ? 1_150
       : BASE_PLAYER_STATS.postHitInvulnerabilityMs,
+    movementSpeedMultiplier: selected.has("windstep-sigil") ? 1.15 : 1,
+    hitStunMs: selected.has("stalwart-rune") ? 90 : BASE_PLAYER_STATS.hitStunMs,
+    playerKnockbackMs: selected.has("stalwart-rune") ? 80 : BASE_PLAYER_STATS.playerKnockbackMs,
   });
   const numericValues = Object.values(stats);
   if (!numericValues.every((value) => Number.isFinite(value) && value > 0)) {

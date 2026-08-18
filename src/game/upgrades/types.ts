@@ -1,5 +1,12 @@
 export type UpgradeId =
-  "tempered-edge" | "long-reach" | "quickened-steel" | "fleet-sigil" | "vital-rune" | "aegis-rune";
+  | "tempered-edge"
+  | "long-reach"
+  | "quickened-steel"
+  | "fleet-sigil"
+  | "vital-rune"
+  | "aegis-rune"
+  | "windstep-sigil"
+  | "stalwart-rune";
 
 export interface UpgradeDefinition {
   readonly id: UpgradeId;
@@ -23,9 +30,13 @@ export interface EffectivePlayerStats {
   readonly dashCooldownMs: number;
   readonly maximumHealth: number;
   readonly postHitInvulnerabilityMs: number;
+  readonly movementSpeedMultiplier: number;
+  readonly hitStunMs: number;
+  readonly playerKnockbackMs: number;
 }
 
 export interface UpgradeOffer {
+  readonly floorNumber: 1 | 2 | 3;
   readonly index: number;
   readonly fingerprint: string;
   readonly upgradeIds: readonly UpgradeId[];

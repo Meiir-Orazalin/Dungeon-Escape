@@ -62,7 +62,7 @@ export class MenuScene extends Phaser.Scene {
       .text(
         GAME_WIDTH / 2,
         225,
-        "Loot the catacombs. Forge a run build. Find the key and escape.",
+        "Conquer three deterministic floors. Carry your health, shards, and runes deeper.",
         {
           color: "#8f9b9d",
           fontFamily: "Georgia, Times New Roman, serif",
@@ -115,7 +115,7 @@ export class MenuScene extends Phaser.Scene {
       .text(
         0,
         0,
-        "ENEMIES + CHESTS  ·  RUNIC SHARDS     FLASKS  ·  RESTORE HEALTH     FORGE  ·  RUN UPGRADES\nWASD / ARROWS  ·  MOVE     SPACE / J / CLICK  ·  ATTACK     SHIFT  ·  DASH\nE  ·  INTERACT     R  ·  RESTART     N  ·  NEW DUNGEON",
+        "THREE FLOORS  ·  STRONGER ENEMIES WITH DEPTH     LOOT + RUNEFORGE  ·  OPTIONAL\nWASD / ARROWS  ·  MOVE     SPACE / J / CLICK  ·  ATTACK     SHIFT  ·  DASH     E  ·  INTERACT\nR  ·  REPLAY CURRENT FLOOR     N  ·  NEW RUN",
         {
           align: "center",
           color: "#a7b0af",

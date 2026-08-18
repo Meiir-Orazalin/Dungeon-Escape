@@ -7,50 +7,49 @@ import { BASE_PLAYER_STATS, deriveEffectivePlayerStats } from "../src/game/upgra
 import { createUpgradeOffer, createUpgradeOfferFingerprint } from "../src/game/upgrades/offer";
 import type { UpgradeId } from "../src/game/upgrades/types";
 
-describe("Phase 5 upgrade catalog and offers", () => {
-  it("contains exactly six stable unique upgrades", () => {
-    expect(UPGRADE_CATALOG).toHaveLength(6);
-    expect(new Set(UPGRADE_IDS).size).toBe(6);
+describe("Phase 6 upgrade catalog and offers", () => {
+  it("contains exactly eight stable unique upgrades", () => {
+    expect(UPGRADE_CATALOG).toHaveLength(8);
+    expect(new Set(UPGRADE_IDS).size).toBe(8);
   });
 
   it("reproduces deterministic three-choice offers", () => {
-    const first = createUpgradeOffer("lt-1234abcd", 0, []);
-    expect(createUpgradeOffer("lt-1234abcd", 0, [])).toEqual(first);
+    const first = createUpgradeOffer("lt-1234abcd", 1, 0, []);
+    expect(createUpgradeOffer("lt-1234abcd", 1, 0, [])).toEqual(first);
     expect(first.upgradeIds).toHaveLength(3);
     expect(new Set(first.upgradeIds).size).toBe(3);
     expect(first.fingerprint).toMatch(/^uo-[0-9a-f]{8}$/);
   });
 
   it("excludes selections and derives the second offer from history", () => {
-    const first = createUpgradeOffer("lt-1234abcd", 0, []);
+    const first = createUpgradeOffer("lt-1234abcd", 1, 0, []);
     const selected = first.upgradeIds[0]!;
-    const second = createUpgradeOffer("lt-1234abcd", 1, [selected]);
+    const second = createUpgradeOffer("lt-1234abcd", 1, 1, [selected]);
     expect(second.upgradeIds).not.toContain(selected);
-    expect(createUpgradeOffer("lt-1234abcd", 1, [selected])).toEqual(second);
+    expect(createUpgradeOffer("lt-1234abcd", 1, 1, [selected])).toEqual(second);
     expect(second.fingerprint).not.toBe(first.fingerprint);
   });
 
   it("normally varies across loot fingerprints", () => {
     const offers = ["lt-11111111", "lt-22222222", "lt-33333333"].map((fingerprint) =>
-      createUpgradeOffer(fingerprint, 0, []).upgradeIds.join(","),
+      createUpgradeOffer(fingerprint, 1, 0, []).upgradeIds.join(","),
     );
     expect(new Set(offers).size).toBeGreaterThan(1);
   });
 
   it("rejects invalid indices and inconsistent history without mutating the catalog", () => {
     const before = [...UPGRADE_IDS];
-    expect(() => createUpgradeOffer("lt-1234abcd", 2, [])).toThrow(/zero or one/);
-    expect(() => createUpgradeOffer("lt-1234abcd", 1, [])).toThrow(/history/);
+    expect(() => createUpgradeOffer("lt-1234abcd", 1, 2, [])).toThrow(/zero or one/);
     expect(UPGRADE_IDS).toEqual(before);
   });
 
   it("fingerprints explicit offer ordering and selection history", () => {
     const ids = ["tempered-edge", "long-reach", "vital-rune"] as const;
-    expect(createUpgradeOfferFingerprint("lt-1234abcd", 0, [], ids)).toBe(
-      createUpgradeOfferFingerprint("lt-1234abcd", 0, [], ids),
+    expect(createUpgradeOfferFingerprint("lt-1234abcd", 1, 0, [], ids)).toBe(
+      createUpgradeOfferFingerprint("lt-1234abcd", 1, 0, [], ids),
     );
-    expect(createUpgradeOfferFingerprint("lt-1234abcd", 0, [], ids)).not.toBe(
-      createUpgradeOfferFingerprint("lt-1234abcd", 0, [], [...ids].reverse()),
+    expect(createUpgradeOfferFingerprint("lt-1234abcd", 1, 0, [], ids)).not.toBe(
+      createUpgradeOfferFingerprint("lt-1234abcd", 1, 0, [], [...ids].reverse()),
     );
   });
 });
@@ -67,6 +66,8 @@ describe("effective player stats", () => {
     ["fleet-sigil", "dashCooldownMs", 650],
     ["vital-rune", "maximumHealth", 6],
     ["aegis-rune", "postHitInvulnerabilityMs", 1_150],
+    ["windstep-sigil", "movementSpeedMultiplier", 1.15],
+    ["stalwart-rune", "hitStunMs", 90],
   ];
 
   expectations.forEach(([id, property, expected]) => {
@@ -93,12 +94,20 @@ describe("effective player stats", () => {
     );
   });
 
-  it("rejects duplicate, unknown, and more than two IDs", () => {
+  it("rejects duplicate, unknown, and more than six IDs", () => {
     expect(() => deriveEffectivePlayerStats(["long-reach", "long-reach"])).toThrow(/unique/);
     expect(() => deriveEffectivePlayerStats(["unknown"])).toThrow(/unknown/);
-    expect(() => deriveEffectivePlayerStats(["long-reach", "tempered-edge", "vital-rune"])).toThrow(
-      /at most two/,
-    );
+    expect(() =>
+      deriveEffectivePlayerStats([
+        "long-reach",
+        "tempered-edge",
+        "vital-rune",
+        "fleet-sigil",
+        "aegis-rune",
+        "windstep-sigil",
+        "stalwart-rune",
+      ]),
+    ).toThrow(/at most six/);
   });
 
   it("keeps all effective numbers finite and timing coherent", () => {

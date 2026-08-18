@@ -1,6 +1,6 @@
 import type { UpgradeDefinition, UpgradeId } from "./types";
 
-export const UPGRADE_CATALOG_VERSION = 1;
+export const UPGRADE_CATALOG_VERSION = 2;
 
 export const UPGRADE_CATALOG: readonly UpgradeDefinition[] = Object.freeze([
   Object.freeze({
@@ -50,6 +50,22 @@ export const UPGRADE_CATALOG: readonly UpgradeDefinition[] = Object.freeze([
     description: "Post-hit protection lasts longer.",
     effectSummary: "INVULNERABILITY  850 → 1150 MS",
     displayOrder: 5,
+  }),
+  Object.freeze({
+    id: "windstep-sigil",
+    name: "WINDSTEP SIGIL",
+    shortName: "WIND",
+    description: "Move more quickly through the dungeon.",
+    effectSummary: "MOVE SPEED  × 1.15",
+    displayOrder: 6,
+  }),
+  Object.freeze({
+    id: "stalwart-rune",
+    name: "STALWART RUNE",
+    shortName: "STALWART",
+    description: "Recover more quickly from enemy impacts.",
+    effectSummary: "HIT STUN 90 MS · KNOCKBACK 80 MS",
+    displayOrder: 7,
   }),
 ]);
 

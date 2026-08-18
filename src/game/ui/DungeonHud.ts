@@ -3,15 +3,24 @@ import type Phaser from "phaser";
 import { deriveHealthPips, formatDashStatus, formatEnemyCount } from "../combat/hudFormat";
 import type { DashState, PlayerVitality } from "../combat/types";
 import type { DungeonLayout } from "../dungeon/types";
-import {
-  formatChestProgress,
-  formatSelectedUpgradeNames,
-  formatShardProgress,
-  formatUpgradeProgress,
-} from "../loot/hudFormat";
+import { formatChestProgress, formatShardProgress } from "../loot/hudFormat";
 import type { RunRewardState } from "../loot/rewardState";
-import { formatElapsedTime } from "../objective/timer";
 import type { EscapeObjectiveState } from "../objective/types";
+import {
+  formatCompactBuild,
+  formatFloorForgeCount,
+  formatFloorIndicator,
+  formatGlobalBuildCount,
+  formatRunTimers,
+} from "../run/hudFormat";
+import type { FloorNumber } from "../run/types";
+
+interface DungeonHudFloorDetails {
+  readonly floorNumber: FloorNumber;
+  readonly floorName: string;
+  readonly runSeed: string;
+  readonly accentColor: string;
+}
 
 export class DungeonHud {
   private readonly discoveredText: Phaser.GameObjects.Text;
@@ -25,35 +34,50 @@ export class DungeonHud {
   private readonly chestsText: Phaser.GameObjects.Text;
   private readonly upgradesText: Phaser.GameObjects.Text;
   private readonly buildText: Phaser.GameObjects.Text;
-  private displayedSecond = -1;
+  private displayedSeconds = "";
   private displayedEnemyCount = "";
   private displayedDash = "";
   private displayedVitality = "";
   private displayedRewards = "";
 
-  public constructor(scene: Phaser.Scene, layout: DungeonLayout, totalEnemies: number) {
+  public constructor(
+    scene: Phaser.Scene,
+    layout: DungeonLayout,
+    totalEnemies: number,
+    floorDetails: DungeonHudFloorDetails = {
+      floorNumber: 1,
+      floorName: "THE SHIFTING CATACOMBS",
+      runSeed: layout.seed,
+      accentColor: "#d1b47e",
+    },
+  ) {
     const container = scene.add.container(22, 20).setScrollFactor(0).setDepth(50);
     const plate = scene.add
       .rectangle(0, 0, 700, 158, 0x080b0d, 0.86)
       .setOrigin(0)
       .setStrokeStyle(1, 0xb88c52, 0.42);
-    const title = scene.add.text(16, 11, "THE SHIFTING CATACOMBS", {
-      color: "#d1b47e",
-      fontFamily: "Arial, sans-serif",
-      fontSize: "11px",
-      fontStyle: "bold",
-      letterSpacing: 1.5,
-    });
+    const title = scene.add.text(
+      16,
+      11,
+      `FLOOR ${formatFloorIndicator(floorDetails.floorNumber)}  ·  ${floorDetails.floorName}`,
+      {
+        color: floorDetails.accentColor,
+        fontFamily: "Arial, sans-serif",
+        fontSize: "11px",
+        fontStyle: "bold",
+        letterSpacing: 1.5,
+      },
+    );
     this.timerText = scene.add
-      .text(682, 11, "TIME  ·  00:00", {
-        color: "#d1b47e",
+      .text(682, 11, "FLOOR 00:00  ·  RUN 00:00", {
+        color: floorDetails.accentColor,
         fontFamily: "Arial, sans-serif",
         fontSize: "11px",
         fontStyle: "bold",
         letterSpacing: 1.1,
       })
       .setOrigin(1, 0);
-    const seed = scene.add.text(16, 31, `SEED  ·  ${layout.seed}`, {
+    const seed = scene.add.text(16, 31, `RUN SEED  ·  ${floorDetails.runSeed}`, {
       color: "#929e9f",
       fontFamily: "Arial, sans-serif",
       fontSize: "9px",
@@ -109,7 +133,7 @@ export class DungeonHud {
       fontStyle: "bold",
       letterSpacing: 0.8,
     });
-    this.upgradesText = scene.add.text(398, 94, "RUNES  ·  0 / 2", {
+    this.upgradesText = scene.add.text(398, 94, "FORGE  ·  0 / 2", {
       color: "#ba94c8",
       fontFamily: "Arial, sans-serif",
       fontSize: "9px",
@@ -196,11 +220,11 @@ export class DungeonHud {
       .setColor(state.status === "seeking-key" ? "#9b7770" : "#8fd0b8");
   }
 
-  public updateTimer(elapsedTimeMs: number): void {
-    const displayedSecond = Math.floor(Math.max(0, elapsedTimeMs) / 1_000);
-    if (displayedSecond === this.displayedSecond) return;
-    this.displayedSecond = displayedSecond;
-    this.timerText.setText(`TIME  ·  ${formatElapsedTime(elapsedTimeMs)}`);
+  public updateTimer(floorElapsedTimeMs: number, runElapsedTimeMs = floorElapsedTimeMs): void {
+    const displayedSeconds = `${Math.floor(Math.max(0, floorElapsedTimeMs) / 1_000)}:${Math.floor(Math.max(0, runElapsedTimeMs) / 1_000)}`;
+    if (displayedSeconds === this.displayedSeconds) return;
+    this.displayedSeconds = displayedSeconds;
+    this.timerText.setText(formatRunTimers(floorElapsedTimeMs, runElapsedTimeMs));
   }
 
   public updateHealth(vitality: PlayerVitality): void {
@@ -234,10 +258,10 @@ export class DungeonHud {
     this.chestsText.setText(
       `CHESTS  ·  ${formatChestProgress(state.openedChestIds.size, totalChests)}`,
     );
-    this.upgradesText.setText(
-      `RUNES  ·  ${formatUpgradeProgress(state.selectedUpgradeIds.length)}`,
+    this.upgradesText.setText(`FORGE  ·  ${formatFloorForgeCount(state.forgePurchasesThisFloor)}`);
+    this.buildText.setText(
+      `BUILD  ·  ${formatGlobalBuildCount(state.selectedUpgradeIds.length)}  ${formatCompactBuild(state.selectedUpgradeIds)}`,
     );
-    this.buildText.setText(`BUILD  ·  ${formatSelectedUpgradeNames(state.selectedUpgradeIds)}`);
   }
 
   public updateEnemies(defeated: number, total: number): void {

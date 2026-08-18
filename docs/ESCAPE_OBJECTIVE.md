@@ -156,6 +156,14 @@ E2E mode exposes read-only objective state plus one narrow objective action: `te
 
 The bridge is dynamically imported only in Vite E2E mode. Production assets are audited to exclude `__DUNGEON_ESCAPE_E2E__`, `installE2EBridge`, and `teleportToTarget`.
 
-## Intentionally deferred after Phase 5
+## Phase 6 integration
 
-Traps, coins, general inventory screens, equipment, multiple weapons, multiple floors, difficulty scaling, bosses, scoring, best times, persistent progression, audio, and virtual mobile movement remain later-phase work. Phase 5 chests, shards, immediate flasks, and run upgrades remain optional to this objective.
+Each of the three precomputed floor bundles owns an independent Runic Key and Ancient Gate. The objective planner and `eo-xxxxxxxx` fingerprint remain floor-local and retain their Phase 3 meaning. No key, gate state, room ID, or coordinate carries across floors.
+
+Floor 1 and Floor 2 gate completion keep the run active and enter `floor-cleared`; Continue commits the provisional summary and renders the next precomputed floor. Floor 3 gate completion wins the run and cannot create a fourth floor. Current-floor replay restores a fresh key and sealed gate from the entry checkpoint.
+
+Living enemies, unopened chests, uncollected shards/flasks, and an unused Runeforge never block the objective. Interaction distance/tie behavior remains unchanged. This later routing does not retroactively alter Phase 3 history.
+
+## Intentionally deferred after Phase 6
+
+Boss objectives, traps, alternate exits, scores, persistence, audio, and virtual mobile movement remain later work.

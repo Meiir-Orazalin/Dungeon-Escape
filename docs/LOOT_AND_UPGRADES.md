@@ -131,6 +131,22 @@ E2E snapshots add the loot fingerprint, forge/chest/pickup/reward summaries, rew
 
 They cannot grant shards, heal, open, spawn, collect, select, kill, mutate objective/outcome, or bypass cooldowns. Production audit scanning excludes these identifiers plus every Phase 4 bridge identifier and installation global from `dist`.
 
-## Intentionally deferred
+## Phase 6 integration
 
-There is no inventory, equipment, rarity, affixes, weapon selection, crafting, vendor/shop, experience, level, skill tree, persistence, save, account, multiple floor, transition, boss, difficulty scaling, score, achievement, daily run, trap, audio, pause menu, virtual control, analytics, backend, service worker, offline mode, or network system in Phase 5.
+The published Phase 5 contract was deliberately one-floor: its available shards, six-upgrade catalog, at-most-two build, and all loot state ended with that floor. Phase 6 layers cross-floor run state around the unchanged per-floor `LootPlan`:
+
+- every floor creates a new deterministic plan with three fresh chests, enemy assignments, pickups, and safe-room forge;
+- available shards and globally selected upgrades carry between floors;
+- total collected shards accumulate, while opened chest IDs, collected pickup IDs, flask count, and forge purchases reset at floor entry;
+- every fresh forge starts at cost `6`, then costs `8`, and exhausts after two purchases for that floor;
+- the global build supports at most six one-time selections;
+- current-floor replay restores the floor-entry economy/build and discards upgrades bought on that attempt;
+- Phase 6 permits <kbd>R</kbd> checkpoint replay and <kbd>N</kbd> new-run generation while the Runeforge overlay is open; combat, movement, interaction, and all other world input remain suspended;
+- the catalog expands from six to eight with Windstep Sigil and Stalwart Rune, while all six original effects remain exact; and
+- deterministic offers include floor number, floor-local index, current-floor loot fingerprint, and stable global selected IDs, preserving three legal cards through the sixth possible choice.
+
+This later carry behavior does not retroactively change v0.5.0. Loot remains optional to every key/gate objective, and no inventory or persistence was added. See [THREE_FLOOR_RUN.md](THREE_FLOOR_RUN.md).
+
+## Intentionally deferred after Phase 6
+
+There is no inventory, equipment, rarity, affixes, weapon selection, crafting, vendor/shop, experience, level, skill tree, persistence, save, account, boss, trap, score, achievement, daily run, audio, pause menu, virtual control, analytics, backend, service worker, offline mode, or network system.

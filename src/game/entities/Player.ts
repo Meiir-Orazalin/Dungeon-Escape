@@ -31,8 +31,8 @@ export class Player extends Phaser.Physics.Arcade.Sprite {
     this.setSize(PLAYER_BODY_SIZE, PLAYER_BODY_SIZE);
   }
 
-  public applyMovement(input: MovementInput): void {
-    const velocity = calculateMovementVelocity(input, PLAYER_SPEED);
+  public applyMovement(input: MovementInput, speed = PLAYER_SPEED): void {
+    const velocity = calculateMovementVelocity(input, speed);
     this.setVelocity(velocity.x, velocity.y);
 
     if (velocity.x !== 0 || velocity.y !== 0) {

@@ -9,6 +9,7 @@ import { VitalityFlask } from "../../entities/VitalityFlask";
 import type { GameplayInteractionCandidate } from "../../interaction/selection";
 import { createUpgradeOffer } from "../../upgrades/offer";
 import type { UpgradeId, UpgradeOffer } from "../../upgrades/types";
+import type { FloorNumber } from "../../run/types";
 import { LOOT_CONFIG } from "../config";
 import type { ForgeMarkerState } from "../minimapLoot";
 import {
@@ -20,6 +21,7 @@ import {
   recordFlaskConsumption,
   selectForgeUpgrade,
   type RunRewardState,
+  type InitialRewardCarry,
 } from "../rewardState";
 import { resolveSafeDropPosition } from "../safeDropPosition";
 import type { LootPickupSummary, LootPlan } from "../types";
@@ -37,6 +39,11 @@ interface LootManagerCallbacks {
   readonly healPlayer: (
     amount: number,
   ) => Readonly<{ consumed: boolean; restoredHealth: number; vitality: PlayerVitality }>;
+}
+
+interface LootManagerOptions {
+  readonly floorNumber?: FloorNumber;
+  readonly carry?: InitialRewardCarry;
 }
 
 type PickupRuntime =
@@ -71,7 +78,9 @@ export class LootManager {
     private readonly layout: DungeonLayout,
     public readonly plan: LootPlan,
     private readonly callbacks: LootManagerCallbacks,
+    private readonly options: LootManagerOptions = {},
   ) {
+    this.state = createInitialRewardState(options.carry);
     plan.chests.forEach((chestPlan) => {
       this.chests.set(chestPlan.id, new TreasureChest(scene, chestPlan));
     });
@@ -167,7 +176,8 @@ export class LootManager {
     }
     const offer = createUpgradeOffer(
       this.plan.fingerprint,
-      this.state.selectedUpgradeIds.length,
+      this.options.floorNumber ?? 1,
+      this.state.forgePurchasesThisFloor,
       this.state.selectedUpgradeIds,
     );
     const transition = openForgeOffer(this.state, offer);

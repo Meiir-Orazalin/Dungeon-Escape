@@ -3,6 +3,7 @@ import Phaser from "phaser";
 import type { Player } from "../entities/Player";
 import type { EnemyManager } from "../enemies/EnemyManager";
 import type { MovementInput } from "../input/movement";
+import { PLAYER_SPEED } from "../constants";
 import { BASE_PLAYER_STATS } from "../upgrades/effectiveStats";
 import type { EffectivePlayerStats } from "../upgrades/types";
 import {
@@ -37,6 +38,11 @@ interface CombatCallbacks {
   readonly playerDefeated: () => void;
 }
 
+interface CombatInitialState {
+  readonly effectiveStats?: EffectivePlayerStats;
+  readonly currentHealth?: number;
+}
+
 const NO_MOVEMENT: MovementInput = Object.freeze({
   up: false,
   down: false,
@@ -58,7 +64,13 @@ export class CombatController {
     private readonly player: Player,
     private readonly enemies: EnemyManager,
     private readonly callbacks: CombatCallbacks,
+    initial: CombatInitialState = {},
   ) {
+    this.effectiveStats = initial.effectiveStats ?? BASE_PLAYER_STATS;
+    this.vitality = createInitialVitality(
+      this.effectiveStats.maximumHealth,
+      initial.currentHealth ?? this.effectiveStats.maximumHealth,
+    );
     this.slash = scene.add.graphics().setDepth(8).setVisible(false);
     scene.events.once(Phaser.Scenes.Events.SHUTDOWN, this.destroy, this);
   }
@@ -95,7 +107,10 @@ export class CombatController {
         this.dashState.direction.y * this.effectiveStats.dashSpeed,
       );
     } else {
-      this.player.applyMovement(movementInput);
+      this.player.applyMovement(
+        movementInput,
+        PLAYER_SPEED * this.effectiveStats.movementSpeedMultiplier,
+      );
     }
     if (this.attackState.phase === "active") this.syncSlashTransform();
     const invulnerable = isPlayerInvulnerable(this.vitality, this.dashState.status === "active");
@@ -156,6 +171,7 @@ export class CombatController {
       COMBAT_CONFIG.damagePerHit,
       this.dashState.status === "active",
       this.effectiveStats.postHitInvulnerabilityMs,
+      this.effectiveStats.hitStunMs,
     );
     if (transition.outcome === "ignored") return "ignored";
     this.vitality = transition.state;
@@ -165,7 +181,7 @@ export class CombatController {
       { x: this.player.x, y: this.player.y },
       source,
       COMBAT_CONFIG.playerKnockbackSpeed,
-      COMBAT_CONFIG.playerKnockbackMs,
+      this.effectiveStats.playerKnockbackMs,
       this.player.getFacing(),
     );
     this.player.flashDamage();

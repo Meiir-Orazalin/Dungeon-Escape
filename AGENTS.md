@@ -28,6 +28,10 @@ These instructions apply to the entire Dungeon Escape repository.
 - Do not introduce copyrighted game assets or runtime CDN dependencies.
 - Do not commit `dist`, create a `gh-pages` branch, or add test-only bridge code to the production build.
 - Keep the Vite production base at `/` and keep canonical metadata aligned with `https://meiirorazalin.com/`.
+- Treat the URL seed as the complete run seed; Floor 1 uses it exactly and later floor seeds are derived deterministically.
+- Preserve the meanings of layout, objective, encounter, and loot fingerprints; the run fingerprint is a separate contract.
+- Carry selected upgrades and available shards between floors, but restore the entry checkpoint on active-run `R` and restart the full run on terminal `R`.
+- Do not add run persistence or expose E2E bridge code in production.
 
 ## Documentation
 

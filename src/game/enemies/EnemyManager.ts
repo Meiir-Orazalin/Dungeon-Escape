@@ -11,6 +11,8 @@ import type { DungeonLayout, DungeonRoom } from "../dungeon/types";
 import { ENCOUNTER_GAME_OBJECT_NAMES, ENEMY_ARCHETYPE_CONFIG } from "../encounters/config";
 import type { EncounterPlan, EnemySpawnPlan } from "../encounters/types";
 import type { Player } from "../entities/Player";
+import { deriveEffectiveEnemyStats, getFloorDifficulty } from "../run/difficulty";
+import type { EffectiveEnemyStats, FloorDifficultyProfile } from "../run/types";
 import {
   createAshWispState,
   createStoneWardenState,
@@ -19,7 +21,7 @@ import {
   updateStoneWarden,
 } from "./enemyBrain";
 import { EnemyProjectile } from "./EnemyProjectile";
-import { ASH_WISP_CONFIG, STONE_WARDEN_CONFIG } from "./enemyConfig";
+import { STONE_WARDEN_CONFIG } from "./enemyConfig";
 import type { AshWispState, EnemyReadableState, StoneWardenState } from "./types";
 
 export interface EnemySummary {
@@ -42,6 +44,7 @@ interface EnemyRuntime {
   readonly sprite: Phaser.Physics.Arcade.Sprite;
   readonly shadow: Phaser.GameObjects.Ellipse;
   readonly telegraph: Phaser.GameObjects.Arc;
+  readonly effective: EffectiveEnemyStats;
   health: number;
   state: EnemyReadableState;
   wispState: AshWispState;
@@ -86,6 +89,7 @@ export class EnemyManager {
     private readonly player: Player,
     collisionGroup: Phaser.Physics.Arcade.StaticGroup,
     private readonly callbacks: EnemyManagerCallbacks,
+    private readonly difficulty: FloorDifficultyProfile = getFloorDifficulty(1),
   ) {
     this.currentRoomId = layout.spawnRoomId;
     this.enemyGroup = scene.physics.add.group({ allowGravity: false });
@@ -181,7 +185,7 @@ export class EnemyManager {
             position: Object.freeze({ x: enemy.sprite.x, y: enemy.sprite.y }),
             spawnPosition: Object.freeze({ x: enemy.plan.position.x, y: enemy.plan.position.y }),
             currentHealth: enemy.health,
-            maximumHealth: enemy.plan.maxHealth,
+            maximumHealth: enemy.effective.maximumHealth,
             alive: enemy.health > 0,
             state: enemy.state,
           }),
@@ -226,6 +230,7 @@ export class EnemyManager {
   private createEnemy(plan: EnemySpawnPlan): void {
     const room = this.layout.rooms.find((candidate) => candidate.id === plan.roomId);
     if (!room) throw new Error(`Cannot render enemy ${plan.id}: room ${plan.roomId} is missing.`);
+    const effective = deriveEffectiveEnemyStats(plan.archetype, this.difficulty);
     const sprite = this.scene.physics.add
       .sprite(plan.position.x, plan.position.y, textureFor(plan.archetype))
       .setName(`${ENCOUNTER_GAME_OBJECT_NAMES.ENEMY_PREFIX}${plan.id}`)
@@ -269,9 +274,10 @@ export class EnemyManager {
       sprite,
       shadow,
       telegraph,
-      health: plan.maxHealth,
+      effective,
+      health: effective.maximumHealth,
       state: "dormant",
-      wispState: createAshWispState(),
+      wispState: createAshWispState(effective),
       wardenState: createStoneWardenState(),
       knockback: null,
       wallImpact: false,
@@ -308,11 +314,11 @@ export class EnemyManager {
       playerPosition: { x: this.player.x, y: this.player.y },
     };
     if (enemy.plan.archetype === "bone-stalker") {
-      const decision = decideBoneStalker(input);
+      const decision = decideBoneStalker(input, enemy.effective);
       enemy.state = decision.state;
       enemy.sprite.setVelocity(decision.velocity.x, decision.velocity.y);
     } else if (enemy.plan.archetype === "ash-wisp") {
-      const transition = updateAshWisp(enemy.wispState, input, delta);
+      const transition = updateAshWisp(enemy.wispState, input, delta, enemy.effective);
       enemy.wispState = transition.state;
       enemy.state = transition.state.mode;
       enemy.sprite.setVelocity(transition.velocity.x, transition.velocity.y);
@@ -320,9 +326,15 @@ export class EnemyManager {
       if (!input.playerInHomeRoom) this.destroyOwnerProjectiles(enemy.plan.id);
       if (transition.fireProjectile) this.fireProjectile(enemy, transition.projectileDirection);
     } else {
-      const transition = updateStoneWarden(enemy.wardenState, input, delta, {
-        wallImpact: enemy.wallImpact,
-      });
+      const transition = updateStoneWarden(
+        enemy.wardenState,
+        input,
+        delta,
+        {
+          wallImpact: enemy.wallImpact,
+        },
+        enemy.effective,
+      );
       enemy.wallImpact = false;
       enemy.wardenState = transition.state;
       enemy.state = transition.state.mode;
@@ -371,9 +383,15 @@ export class EnemyManager {
         spawnPosition: enemy.plan.position,
         playerPosition: { x: this.player.x, y: this.player.y },
       };
-      enemy.wardenState = updateStoneWarden(enemy.wardenState, input, 0, {
-        swordInterrupted: true,
-      }).state;
+      enemy.wardenState = updateStoneWarden(
+        enemy.wardenState,
+        input,
+        0,
+        {
+          swordInterrupted: true,
+        },
+        enemy.effective,
+      ).state;
       enemy.state = enemy.wardenState.mode;
       enemy.telegraph.setVisible(false);
     }
@@ -411,8 +429,8 @@ export class EnemyManager {
     projectile.setData("ownerEnemyId", enemy.plan.id);
     this.projectileGroup.add(projectile);
     projectile.setVelocity(
-      direction.x * ASH_WISP_CONFIG.projectileSpeed,
-      direction.y * ASH_WISP_CONFIG.projectileSpeed,
+      direction.x * enemy.effective.wispProjectileSpeed,
+      direction.y * enemy.effective.wispProjectileSpeed,
     );
     this.projectiles.add(projectile);
   }

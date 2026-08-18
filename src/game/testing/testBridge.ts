@@ -16,6 +16,15 @@ export interface E2ESnapshot {
   readonly objectiveFingerprint: string | null;
   readonly encounterFingerprint: string | null;
   readonly lootFingerprint: string | null;
+  readonly runSeed: string | null;
+  readonly runFingerprint: string | null;
+  readonly floorCount: number | null;
+  readonly currentFloorNumber: number | null;
+  readonly currentFloorSeed: string | null;
+  readonly currentFloorName: string | null;
+  readonly currentFloorThemeId: string | null;
+  readonly currentFloorDifficultyId: string | null;
+  readonly floorPlans: GameSceneSnapshot["floorPlans"];
   readonly roomCount: number | null;
   readonly spawnRoomId: number | null;
   readonly destinationRoomId: number | null;
@@ -35,6 +44,8 @@ export interface E2ESnapshot {
   readonly movementEnabled: boolean | null;
   readonly interactionPrompt: string | null;
   readonly elapsedTimeMs: number | null;
+  readonly floorTimeMs: number | null;
+  readonly runTimeMs: number | null;
   readonly totalEnemyCount: number | null;
   readonly aliveEnemyCount: number | null;
   readonly defeatedEnemyCount: number | null;
@@ -51,8 +62,12 @@ export interface E2ESnapshot {
   readonly activeEnemyProjectileCount: number | null;
   readonly defeatOverlayVisible: boolean | null;
   readonly completionOverlayVisible: boolean | null;
+  readonly floorClearedOverlayVisible: boolean | null;
+  readonly runVictoryOverlayVisible: boolean | null;
+  readonly runDefeatOverlayVisible: boolean | null;
   readonly threatRoomCount: number | null;
   readonly enemies: GameSceneSnapshot["enemies"];
+  readonly effectiveEnemyDifficulty: GameSceneSnapshot["effectiveEnemyDifficulty"] | null;
   readonly forgeRoomId: number | null;
   readonly forgePosition: GameSceneSnapshot["forgePosition"] | null;
   readonly forgeState: string | null;
@@ -60,6 +75,7 @@ export interface E2ESnapshot {
   readonly totalCollectedShardCount: number | null;
   readonly currentForgeCost: number | null;
   readonly forgeUpgradesCompleted: number | null;
+  readonly currentFloorForgePurchases: number | null;
   readonly forgeExhausted: boolean | null;
   readonly upgradeOverlayVisible: boolean | null;
   readonly currentUpgradeOfferIds: GameSceneSnapshot["currentUpgradeOfferIds"];
@@ -72,6 +88,9 @@ export interface E2ESnapshot {
   readonly effectiveDashCooldown: number | null;
   readonly effectiveMaximumHealth: number | null;
   readonly effectivePostHitInvulnerability: number | null;
+  readonly effectiveMovementMultiplier: number | null;
+  readonly effectiveHitStunDuration: number | null;
+  readonly effectivePlayerKnockbackDuration: number | null;
   readonly totalChestCount: number | null;
   readonly openedChestCount: number | null;
   readonly chests: GameSceneSnapshot["chests"];
@@ -79,6 +98,10 @@ export interface E2ESnapshot {
   readonly flaskConsumptionCount: number | null;
   readonly enemyRewards: GameSceneSnapshot["enemyRewards"];
   readonly runActivity: GameSceneSnapshot["runActivity"] | null;
+  readonly checkpoint: GameSceneSnapshot["checkpoint"] | null;
+  readonly cumulativeStatistics: GameSceneSnapshot["cumulativeStatistics"] | null;
+  readonly currentFloorStatistics: GameSceneSnapshot["currentFloorStatistics"] | null;
+  readonly completedFloorSummaries: GameSceneSnapshot["completedFloorSummaries"];
 }
 
 export interface DungeonEscapeE2EBridge {
@@ -113,6 +136,15 @@ export function installE2EBridge(game: Phaser.Game): void {
         objectiveFingerprint: gameSnapshot?.objectiveFingerprint ?? null,
         encounterFingerprint: gameSnapshot?.encounterFingerprint ?? null,
         lootFingerprint: gameSnapshot?.lootFingerprint ?? null,
+        runSeed: gameSnapshot?.runSeed ?? null,
+        runFingerprint: gameSnapshot?.runFingerprint ?? null,
+        floorCount: gameSnapshot?.floorCount ?? null,
+        currentFloorNumber: gameSnapshot?.currentFloorNumber ?? null,
+        currentFloorSeed: gameSnapshot?.currentFloorSeed ?? null,
+        currentFloorName: gameSnapshot?.currentFloorName ?? null,
+        currentFloorThemeId: gameSnapshot?.currentFloorThemeId ?? null,
+        currentFloorDifficultyId: gameSnapshot?.currentFloorDifficultyId ?? null,
+        floorPlans: gameSnapshot?.floorPlans ?? [],
         roomCount: gameSnapshot?.roomCount ?? null,
         spawnRoomId: gameSnapshot?.spawnRoomId ?? null,
         destinationRoomId: gameSnapshot?.destinationRoomId ?? null,
@@ -132,6 +164,8 @@ export function installE2EBridge(game: Phaser.Game): void {
         movementEnabled: gameSnapshot?.movementEnabled ?? null,
         interactionPrompt: gameSnapshot?.interactionPrompt ?? null,
         elapsedTimeMs: gameSnapshot?.elapsedTimeMs ?? null,
+        floorTimeMs: gameSnapshot?.floorTimeMs ?? null,
+        runTimeMs: gameSnapshot?.runTimeMs ?? null,
         totalEnemyCount: gameSnapshot?.totalEnemyCount ?? null,
         aliveEnemyCount: gameSnapshot?.aliveEnemyCount ?? null,
         defeatedEnemyCount: gameSnapshot?.defeatedEnemyCount ?? null,
@@ -148,8 +182,12 @@ export function installE2EBridge(game: Phaser.Game): void {
         activeEnemyProjectileCount: gameSnapshot?.activeEnemyProjectileCount ?? null,
         defeatOverlayVisible: gameSnapshot?.defeatOverlayVisible ?? null,
         completionOverlayVisible: gameSnapshot?.completionOverlayVisible ?? null,
+        floorClearedOverlayVisible: gameSnapshot?.floorClearedOverlayVisible ?? null,
+        runVictoryOverlayVisible: gameSnapshot?.runVictoryOverlayVisible ?? null,
+        runDefeatOverlayVisible: gameSnapshot?.runDefeatOverlayVisible ?? null,
         threatRoomCount: gameSnapshot?.threatRoomCount ?? null,
         enemies: gameSnapshot?.enemies ?? [],
+        effectiveEnemyDifficulty: gameSnapshot?.effectiveEnemyDifficulty ?? null,
         forgeRoomId: gameSnapshot?.forgeRoomId ?? null,
         forgePosition: gameSnapshot?.forgePosition ?? null,
         forgeState: gameSnapshot?.forgeState ?? null,
@@ -157,6 +195,7 @@ export function installE2EBridge(game: Phaser.Game): void {
         totalCollectedShardCount: gameSnapshot?.totalCollectedShardCount ?? null,
         currentForgeCost: gameSnapshot?.currentForgeCost ?? null,
         forgeUpgradesCompleted: gameSnapshot?.forgeUpgradesCompleted ?? null,
+        currentFloorForgePurchases: gameSnapshot?.currentFloorForgePurchases ?? null,
         forgeExhausted: gameSnapshot?.forgeExhausted ?? null,
         upgradeOverlayVisible: gameSnapshot?.upgradeOverlayVisible ?? null,
         currentUpgradeOfferIds: gameSnapshot?.currentUpgradeOfferIds ?? [],
@@ -169,6 +208,9 @@ export function installE2EBridge(game: Phaser.Game): void {
         effectiveDashCooldown: gameSnapshot?.effectiveDashCooldown ?? null,
         effectiveMaximumHealth: gameSnapshot?.effectiveMaximumHealth ?? null,
         effectivePostHitInvulnerability: gameSnapshot?.effectivePostHitInvulnerability ?? null,
+        effectiveMovementMultiplier: gameSnapshot?.effectiveMovementMultiplier ?? null,
+        effectiveHitStunDuration: gameSnapshot?.effectiveHitStunDuration ?? null,
+        effectivePlayerKnockbackDuration: gameSnapshot?.effectivePlayerKnockbackDuration ?? null,
         totalChestCount: gameSnapshot?.totalChestCount ?? null,
         openedChestCount: gameSnapshot?.openedChestCount ?? null,
         chests: gameSnapshot?.chests ?? [],
@@ -176,6 +218,10 @@ export function installE2EBridge(game: Phaser.Game): void {
         flaskConsumptionCount: gameSnapshot?.flaskConsumptionCount ?? null,
         enemyRewards: gameSnapshot?.enemyRewards ?? [],
         runActivity: gameSnapshot?.runActivity ?? null,
+        checkpoint: gameSnapshot?.checkpoint ?? null,
+        cumulativeStatistics: gameSnapshot?.cumulativeStatistics ?? null,
+        currentFloorStatistics: gameSnapshot?.currentFloorStatistics ?? null,
+        completedFloorSummaries: gameSnapshot?.completedFloorSummaries ?? [],
       };
     },
     teleportToTarget: (target): void => {

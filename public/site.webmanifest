@@ -1,7 +1,7 @@
 {
   "name": "Dungeon Escape",
   "short_name": "Dungeon Escape",
-  "description": "Explore a shifting dungeon, fight deterministic enemies, recover the Runic Key, and escape through the Ancient Gate.",
+  "description": "Descend through three deterministic dungeons, forge a run build, recover each Runic Key, and escape the depths.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

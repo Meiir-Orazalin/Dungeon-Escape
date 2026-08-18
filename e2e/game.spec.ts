@@ -60,6 +60,22 @@ interface E2ESnapshot {
   readonly objectiveFingerprint: string | null;
   readonly encounterFingerprint: string | null;
   readonly lootFingerprint: string | null;
+  readonly runSeed: string | null;
+  readonly runFingerprint: string | null;
+  readonly floorCount: number | null;
+  readonly currentFloorNumber: number | null;
+  readonly currentFloorSeed: string | null;
+  readonly currentFloorName: string | null;
+  readonly currentFloorThemeId: string | null;
+  readonly currentFloorDifficultyId: string | null;
+  readonly floorPlans: readonly Readonly<{
+    floorNumber: number;
+    floorSeed: string;
+    layoutFingerprint: string;
+    objectiveFingerprint: string;
+    encounterFingerprint: string;
+    lootFingerprint: string;
+  }>[];
   readonly roomCount: number | null;
   readonly spawnRoomId: number | null;
   readonly destinationRoomId: number | null;
@@ -79,6 +95,8 @@ interface E2ESnapshot {
   readonly movementEnabled: boolean | null;
   readonly interactionPrompt: string | null;
   readonly elapsedTimeMs: number | null;
+  readonly floorTimeMs: number | null;
+  readonly runTimeMs: number | null;
   readonly totalEnemyCount: number | null;
   readonly aliveEnemyCount: number | null;
   readonly defeatedEnemyCount: number | null;
@@ -95,8 +113,19 @@ interface E2ESnapshot {
   readonly activeEnemyProjectileCount: number | null;
   readonly defeatOverlayVisible: boolean | null;
   readonly completionOverlayVisible: boolean | null;
+  readonly floorClearedOverlayVisible: boolean | null;
+  readonly runVictoryOverlayVisible: boolean | null;
+  readonly runDefeatOverlayVisible: boolean | null;
   readonly threatRoomCount: number | null;
   readonly enemies: readonly EnemySummary[];
+  readonly effectiveEnemyDifficulty: Readonly<{
+    id: string;
+    enemyMaximumHealthBonus: number;
+    enemyMovementSpeedMultiplier: number;
+    enemyActionCooldownMultiplier: number;
+    ashWispProjectileSpeedMultiplier: number;
+    stoneWardenChargeSpeedMultiplier: number;
+  }> | null;
   readonly forgeRoomId: number | null;
   readonly forgePosition: Position | null;
   readonly forgeState: string | null;
@@ -104,6 +133,7 @@ interface E2ESnapshot {
   readonly totalCollectedShardCount: number | null;
   readonly currentForgeCost: number | null;
   readonly forgeUpgradesCompleted: number | null;
+  readonly currentFloorForgePurchases: number | null;
   readonly forgeExhausted: boolean | null;
   readonly upgradeOverlayVisible: boolean | null;
   readonly currentUpgradeOfferIds: readonly string[];
@@ -116,13 +146,27 @@ interface E2ESnapshot {
   readonly effectiveDashCooldown: number | null;
   readonly effectiveMaximumHealth: number | null;
   readonly effectivePostHitInvulnerability: number | null;
+  readonly effectiveMovementMultiplier: number | null;
+  readonly effectiveHitStunDuration: number | null;
+  readonly effectivePlayerKnockbackDuration: number | null;
   readonly totalChestCount: number | null;
   readonly openedChestCount: number | null;
   readonly chests: readonly ChestSummary[];
   readonly pickups: readonly PickupSummary[];
   readonly flaskConsumptionCount: number | null;
   readonly enemyRewards: readonly EnemyRewardSummary[];
-  readonly runActivity: "playing" | "choosing-upgrade" | null;
+  readonly runActivity: "playing" | "choosing-upgrade" | "floor-cleared" | null;
+  readonly checkpoint: Readonly<{
+    floorNumber: number;
+    runElapsedMs: number;
+    carry: Readonly<{
+      currentHealth: number;
+      availableShards: number;
+      totalCollectedShards: number;
+      selectedUpgradeIds: readonly string[];
+    }>;
+  }> | null;
+  readonly completedFloorSummaries: readonly Readonly<{ floorNumber: number }>[];
 }
 
 interface TestWindow extends Window {
@@ -290,6 +334,16 @@ async function defeatPlayer(page: Page, enemyId: string): Promise<E2ESnapshot> {
 
 async function waitForScene(page: Page, sceneKey: string): Promise<void> {
   await expect.poll(async () => (await getSnapshot(page)).activeScene).toBe(sceneKey);
+}
+
+async function continueToNextFloor(page: Page): Promise<E2ESnapshot> {
+  const currentFloor = (await getSnapshot(page)).currentFloorNumber ?? 0;
+  await waitForCompletionOverlay(page);
+  await page.keyboard.press("Enter");
+  await expect
+    .poll(async () => (await getSnapshot(page)).currentFloorNumber)
+    .toBe(currentFloor + 1);
+  return getSnapshot(page);
 }
 
 async function openMenu(page: Page, seed = FIXED_SEED): Promise<void> {
@@ -633,7 +687,7 @@ test("completion overlay Replay This Seed pointer control restores the same obje
   const initial = await getSnapshot(page);
   await completeFloor(page);
   await waitForCompletionOverlay(page);
-  await clickCanvasPoint(page, 358, 374);
+  await clickCanvasPoint(page, 480, 400);
   await expect.poll(async () => (await getSnapshot(page)).objectiveStatus).toBe("seeking-key");
   const replayed = await getSnapshot(page);
   expect(replayed.seed).toBe(initial.seed);
@@ -649,7 +703,7 @@ test("completion overlay New Dungeon pointer control creates a new deterministic
   await startWithKey(page);
   const completed = await completeFloor(page);
   await waitForCompletionOverlay(page);
-  await clickCanvasPoint(page, 602, 374);
+  await clickCanvasPoint(page, 690, 400);
   await expect
     .poll(async () => (await getSnapshot(page)).objectiveFingerprint)
     .not.toBe(completed.objectiveFingerprint);
@@ -658,22 +712,20 @@ test("completion overlay New Dungeon pointer control creates a new deterministic
   expect(next.objectiveStatus).toBe("seeking-key");
 });
 
-test("Enter and Space each create a new dungeon from completion", async ({ page }) => {
+test("Enter and Space descend through the two Floor Cleared transitions", async ({ page }) => {
   await openMenu(page, "completion-keyboard-objective");
   await startWithKey(page);
   const firstCompleted = await completeFloor(page);
   await waitForCompletionOverlay(page);
   await page.keyboard.press("Enter");
-  await expect
-    .poll(async () => (await getSnapshot(page)).objectiveFingerprint)
-    .not.toBe(firstCompleted.objectiveFingerprint);
+  await expect.poll(async () => (await getSnapshot(page)).currentFloorNumber).toBe(2);
+  expect((await getSnapshot(page)).seed).toBe(firstCompleted.seed);
 
   const secondCompleted = await completeFloor(page);
   await waitForCompletionOverlay(page);
   await page.keyboard.press("Space");
-  await expect
-    .poll(async () => (await getSnapshot(page)).objectiveFingerprint)
-    .not.toBe(secondCompleted.objectiveFingerprint);
+  await expect.poll(async () => (await getSnapshot(page)).currentFloorNumber).toBe(3);
+  expect((await getSnapshot(page)).seed).toBe(secondCompleted.seed);
 });
 
 test("Space preserves the menu start control", async ({ page }) => {
@@ -808,7 +860,10 @@ test("Ash Wisp telegraph creates bounded projectiles that damage and expire", as
     .poll(async () => enemyById(await getSnapshot(page), wisp.id).state)
     .toBe("telegraph");
   await expect
-    .poll(async () => (await getSnapshot(page)).activeEnemyProjectileCount)
+    .poll(async () => (await getSnapshot(page)).activeEnemyProjectileCount, {
+      timeout: 8_000,
+      intervals: [20],
+    })
     .toBeGreaterThan(0);
   expect((await getSnapshot(page)).activeEnemyProjectileCount).toBeLessThanOrEqual(2);
   await expect
@@ -901,14 +956,15 @@ test("Stone Warden telegraphs, charges without steering, recovers, and is sword-
   expect(dot / magnitudes).toBeGreaterThan(0.8);
 });
 
-test("escape succeeds with living enemies and freezes the complete combat runtime", async ({
+test("Floor 1 clears with living enemies and freezes the complete combat runtime", async ({
   page,
 }) => {
   await openMenu(page, "living-enemies-escape");
   await startWithKey(page);
   const initial = await getSnapshot(page);
   const completed = await completeFloor(page);
-  expect(completed.runOutcome).toBe("escaped");
+  expect(completed.runOutcome).toBe("active");
+  expect(completed.runActivity).toBe("floor-cleared");
   expect(completed.aliveEnemyCount).toBe(completed.totalEnemyCount);
   expect(completed.activeEnemyProjectileCount).toBe(0);
   const frozenTime = completed.elapsedTimeMs;
@@ -1003,7 +1059,7 @@ test("defeat overlay Replay This Seed pointer button restores full same-seed sta
   await startWithKey(page);
   const initial = await getSnapshot(page);
   await defeatPlayer(page, enemyByArchetype(initial, "stone-warden").id);
-  await clickCanvasPoint(page, 358, 374);
+  await clickCanvasPoint(page, 365, 410);
   await expect.poll(async () => (await getSnapshot(page)).runOutcome).toBe("active");
   const replayed = await getSnapshot(page);
   expect(replayed.encounterFingerprint).toBe(initial.encounterFingerprint);
@@ -1016,7 +1072,7 @@ test("defeat overlay New Dungeon pointer button creates a fresh complete run", a
   await startWithKey(page);
   const initial = await getSnapshot(page);
   await defeatPlayer(page, enemyByArchetype(initial, "stone-warden").id);
-  await clickCanvasPoint(page, 602, 374);
+  await clickCanvasPoint(page, 595, 410);
   await expect
     .poll(async () => (await getSnapshot(page)).encounterFingerprint)
     .not.toBe(initial.encounterFingerprint);
@@ -1053,6 +1109,7 @@ test("fixed seed reproduces the complete deterministic loot plan and starts empt
   expect(first.effectiveMaximumHealth).toBe(5);
 
   await page.reload();
+  await page.waitForFunction(() => Boolean((window as TestWindow).__DUNGEON_ESCAPE_E2E__));
   await waitForScene(page, "MenuScene");
   await startWithKey(page);
   const second = await getSnapshot(page);
@@ -1181,8 +1238,6 @@ test("Runeforge inspection, deterministic overlay suspension, Escape, and select
   await page.keyboard.press("j");
   await page.keyboard.press("Shift");
   await page.keyboard.press("e");
-  await page.keyboard.press("r");
-  await page.keyboard.press("n");
   await page.keyboard.down("ArrowRight");
   await page.waitForTimeout(250);
   await page.keyboard.up("ArrowRight");
@@ -1217,9 +1272,51 @@ test("Runeforge inspection, deterministic overlay suspension, Escape, and select
     "fleet-sigil": ["effectiveDashCooldown", 650],
     "vital-rune": ["effectiveMaximumHealth", 6],
     "aegis-rune": ["effectivePostHitInvulnerability", 1_150],
+    "windstep-sigil": ["effectiveMovementMultiplier", 1.15],
+    "stalwart-rune": ["effectiveHitStunDuration", 90],
   };
   const [effectField, effectValue] = effectByUpgrade[selectedId]!;
   expect(selected[effectField]).toBe(effectValue);
+});
+
+test("R from the Runeforge overlay restores the current floor-entry checkpoint", async ({
+  page,
+}) => {
+  await openMenu(page, "phase6-forge-replay");
+  await startWithKey(page);
+  const initial = await getSnapshot(page);
+  await collectAllChestShards(page);
+  await teleportToForge(page);
+  await page.keyboard.press("e");
+  await expect.poll(async () => (await getSnapshot(page)).upgradeOverlayVisible).toBe(true);
+  await page.keyboard.press("r");
+  await expect.poll(async () => (await getSnapshot(page)).upgradeOverlayVisible).toBe(false);
+  const replayed = await getSnapshot(page);
+  expect(replayed.currentFloorNumber).toBe(1);
+  expect(replayed.runFingerprint).toBe(initial.runFingerprint);
+  expect(replayed.currentFloorSeed).toBe(initial.currentFloorSeed);
+  expect(replayed.availableShardCount).toBe(0);
+  expect(replayed.selectedUpgradeIds).toEqual([]);
+  expect(replayed.runActivity).toBe("playing");
+});
+
+test("N from the Runeforge overlay starts a fresh run", async ({ page }) => {
+  await openMenu(page, "phase6-forge-new-run");
+  await startWithKey(page);
+  const initial = await getSnapshot(page);
+  await collectAllChestShards(page);
+  await teleportToForge(page);
+  await page.keyboard.press("e");
+  await expect.poll(async () => (await getSnapshot(page)).upgradeOverlayVisible).toBe(true);
+  await page.keyboard.press("n");
+  await expect.poll(async () => (await getSnapshot(page)).runSeed).not.toBe(initial.runSeed);
+  const next = await getSnapshot(page);
+  expect(next.currentFloorNumber).toBe(1);
+  expect(next.runFingerprint).not.toBe(initial.runFingerprint);
+  expect(next.availableShardCount).toBe(0);
+  expect(next.selectedUpgradeIds).toEqual([]);
+  expect(next.upgradeOverlayVisible).toBe(false);
+  expect(next.runActivity).toBe("playing");
 });
 
 test("two real forge choices exhaust the forge and same-seed R resets all rewards", async ({
@@ -1269,7 +1366,7 @@ test("two real forge choices exhaust the forge and same-seed R resets all reward
 });
 
 test("Tempered Edge changes real melee damage on the documented fixed seed", async ({ page }) => {
-  await openMenu(page, "phase5-upgrade-4");
+  await openMenu(page, "phase6-upgrade-0");
   await startWithKey(page);
   const funded = await collectAllChestShards(page);
   expect(funded.availableShardCount).toBeGreaterThanOrEqual(6);
@@ -1277,17 +1374,215 @@ test("Tempered Edge changes real melee damage on the documented fixed seed", asy
   await page.keyboard.press("e");
   await expect.poll(async () => (await getSnapshot(page)).upgradeOverlayVisible).toBe(true);
   expect((await getSnapshot(page)).currentUpgradeOfferIds).toEqual([
-    "vital-rune",
-    "aegis-rune",
     "tempered-edge",
+    "long-reach",
+    "fleet-sigil",
   ]);
-  await page.keyboard.press("3");
+  await page.keyboard.press("1");
   await expect.poll(async () => (await getSnapshot(page)).effectiveMeleeDamage).toBe(2);
   const stalker = enemyByArchetype(await getSnapshot(page), "bone-stalker");
   expect(stalker.maximumHealth).toBe(2);
   await teleportNearEnemy(page, stalker.id);
   await page.keyboard.press("Space");
   await expect.poll(async () => enemyById(await getSnapshot(page), stalker.id).alive).toBe(false);
+});
+
+test("fixed run seed reproduces all three floor seeds and twelve floor fingerprints", async ({
+  page,
+}) => {
+  await openMenu(page, "phase6-three-floor-plan");
+  await startWithKey(page);
+  const first = await getSnapshot(page);
+  expect(first.runFingerprint).toMatch(/^rn-[0-9a-f]{8}$/);
+  expect(first.floorCount).toBe(3);
+  expect(first.currentFloorNumber).toBe(1);
+  expect(first.currentFloorSeed).toBe(first.runSeed);
+  expect(first.currentFloorThemeId).toBe("shifting-catacombs");
+  expect(first.currentFloorDifficultyId).toBe("depth-1");
+  expect(first.floorPlans).toHaveLength(3);
+  expect(first.floorPlans.map((floor) => floor.floorNumber)).toEqual([1, 2, 3]);
+  expect(new Set(first.floorPlans.map((floor) => floor.floorSeed)).size).toBe(3);
+  expect(first.floorPlans[0]).toEqual({
+    floorNumber: 1,
+    floorSeed: first.runSeed,
+    layoutFingerprint: first.layoutFingerprint,
+    objectiveFingerprint: first.objectiveFingerprint,
+    encounterFingerprint: first.encounterFingerprint,
+    lootFingerprint: first.lootFingerprint,
+  });
+
+  await page.reload();
+  await page.waitForFunction(() => Boolean((window as TestWindow).__DUNGEON_ESCAPE_E2E__));
+  await waitForScene(page, "MenuScene");
+  await startWithKey(page);
+  const reloaded = await getSnapshot(page);
+  expect(reloaded.runFingerprint).toBe(first.runFingerprint);
+  expect(reloaded.floorPlans).toEqual(first.floorPlans);
+  expect(reloaded.currentFloorNumber).toBe(1);
+  expect(reloaded.availableShardCount).toBe(0);
+  expect(reloaded.selectedUpgradeIds).toEqual([]);
+});
+
+test("Floor 2 carries health, shards, and upgrades and R restores its entry checkpoint", async ({
+  page,
+}) => {
+  await openMenu(page, "phase6-carry-checkpoint");
+  await startWithKey(page);
+  const initial = await getSnapshot(page);
+  const funded = await collectAllChestShards(page);
+  await teleportToForge(page);
+  await page.keyboard.press("e");
+  await expect.poll(async () => (await getSnapshot(page)).upgradeOverlayVisible).toBe(true);
+  await page.keyboard.press("1");
+  const selected = await getSnapshot(page);
+  expect(selected.selectedUpgradeIds).toHaveLength(1);
+  const enemy = enemyByArchetype(selected, "bone-stalker");
+  await teleportOntoEnemy(page, enemy.id);
+  await expect.poll(async () => (await getSnapshot(page)).playerHealth).toBe(4);
+
+  await completeFloor(page);
+  const cleared = await getSnapshot(page);
+  const floorOneRunTime = cleared.runTimeMs ?? 0;
+  const floorTwo = await continueToNextFloor(page);
+  expect(floorTwo.currentFloorNumber).toBe(2);
+  expect(floorTwo.seed).toBe(initial.seed);
+  expect(new URL(page.url()).searchParams.get("seed")).toBe(initial.seed);
+  expect(floorTwo.currentFloorThemeId).toBe("ember-vaults");
+  expect(floorTwo.currentFloorDifficultyId).toBe("depth-2");
+  expect(floorTwo.effectiveEnemyDifficulty).toEqual(
+    expect.objectContaining({
+      enemyMaximumHealthBonus: 1,
+      enemyMovementSpeedMultiplier: 1.08,
+      enemyActionCooldownMultiplier: 0.92,
+    }),
+  );
+  expect(floorTwo.playerHealth).toBe(5);
+  expect(floorTwo.availableShardCount).toBe((funded.availableShardCount ?? 0) - 6);
+  expect(floorTwo.selectedUpgradeIds).toEqual(selected.selectedUpgradeIds);
+  expect(floorTwo.currentForgeCost).toBe(6);
+  expect(floorTwo.currentFloorForgePurchases).toBe(0);
+  expect(floorTwo.discoveredRoomCount).toBe(1);
+  expect(floorTwo.floorTimeMs).toBeLessThan(1_000);
+  expect(floorTwo.runTimeMs).toBeGreaterThanOrEqual(floorOneRunTime);
+  const entry = floorTwo.checkpoint!;
+
+  const chest = floorTwo.chests[0]!;
+  await openChest(page, chest.id);
+  const shard = (await getSnapshot(page)).pickups.find(
+    (pickup) => pickup.sourceId === chest.id && pickup.type === "shard",
+  )!;
+  await collectPickup(page, shard.id);
+  expect((await getSnapshot(page)).availableShardCount).toBeGreaterThan(
+    entry.carry.availableShards,
+  );
+  await page.keyboard.press("r");
+  await expect.poll(async () => (await getSnapshot(page)).openedChestCount).toBe(0);
+  const replayed = await getSnapshot(page);
+  expect(replayed.currentFloorNumber).toBe(2);
+  expect(replayed.currentFloorSeed).toBe(floorTwo.currentFloorSeed);
+  expect(replayed.lootFingerprint).toBe(floorTwo.lootFingerprint);
+  expect(replayed.availableShardCount).toBe(entry.carry.availableShards);
+  expect(replayed.selectedUpgradeIds).toEqual(entry.carry.selectedUpgradeIds);
+  expect(replayed.playerHealth).toBe(entry.carry.currentHealth);
+  expect(replayed.floorTimeMs).toBeLessThan(1_000);
+});
+
+test("pointer Descend Deeper enters Floor 2 without changing the run URL", async ({ page }) => {
+  await openMenu(page, "phase6-pointer-descend");
+  await startWithKey(page);
+  const initial = await getSnapshot(page);
+  await completeFloor(page);
+  await waitForCompletionOverlay(page);
+  await clickCanvasPoint(page, 270, 400);
+  await expect.poll(async () => (await getSnapshot(page)).currentFloorNumber).toBe(2);
+  expect((await getSnapshot(page)).runFingerprint).toBe(initial.runFingerprint);
+  expect(new URL(page.url()).searchParams.get("seed")).toBe(initial.seed);
+});
+
+test("all three real gate interactions end in victory with no fourth floor", async ({ page }) => {
+  await openMenu(page, "phase6-full-victory");
+  await startWithKey(page);
+  const initial = await getSnapshot(page);
+
+  await completeFloor(page);
+  await continueToNextFloor(page);
+  expect((await getSnapshot(page)).currentFloorThemeId).toBe("ember-vaults");
+  await completeFloor(page);
+  await continueToNextFloor(page);
+  const floorThree = await getSnapshot(page);
+  expect(floorThree.currentFloorNumber).toBe(3);
+  expect(floorThree.currentFloorThemeId).toBe("obsidian-sanctum");
+  expect(floorThree.currentFloorDifficultyId).toBe("depth-3");
+  expect(floorThree.effectiveEnemyDifficulty).toEqual(
+    expect.objectContaining({
+      enemyMaximumHealthBonus: 2,
+      enemyMovementSpeedMultiplier: 1.16,
+      enemyActionCooldownMultiplier: 0.84,
+      ashWispProjectileSpeedMultiplier: 1.2,
+      stoneWardenChargeSpeedMultiplier: 1.2,
+    }),
+  );
+  await completeFloor(page);
+  await expect.poll(async () => (await getSnapshot(page)).runOutcome).toBe("escaped");
+  await expect.poll(async () => (await getSnapshot(page)).runVictoryOverlayVisible).toBe(true);
+  const victory = await getSnapshot(page);
+  expect(victory.currentFloorNumber).toBe(3);
+  expect(victory.completedFloorSummaries.map((summary) => summary.floorNumber)).toEqual([1, 2, 3]);
+  expect(victory.floorCount).toBe(3);
+
+  await page.keyboard.press("r");
+  await expect.poll(async () => (await getSnapshot(page)).currentFloorNumber).toBe(1);
+  const replay = await getSnapshot(page);
+  expect(replay.runFingerprint).toBe(initial.runFingerprint);
+  expect(replay.runOutcome).toBe("active");
+  expect(replay.availableShardCount).toBe(0);
+  expect(replay.selectedUpgradeIds).toEqual([]);
+  expect(replay.completedFloorSummaries).toEqual([]);
+  expect(replay.runTimeMs).toBeLessThan(1_000);
+});
+
+test("defeat on Floor 2 ends the run and R replays the complete same-seed run", async ({
+  page,
+}) => {
+  await openMenu(page, "phase6-floor-two-defeat");
+  await startWithKey(page);
+  const initial = await getSnapshot(page);
+  await completeFloor(page);
+  await continueToNextFloor(page);
+  const floorTwo = await getSnapshot(page);
+  expect(floorTwo.currentFloorNumber).toBe(2);
+  await defeatPlayer(page, enemyByArchetype(floorTwo, "stone-warden").id);
+  const defeated = await getSnapshot(page);
+  expect(defeated.runDefeatOverlayVisible).toBe(true);
+  expect(defeated.currentFloorNumber).toBe(2);
+  expect(defeated.completedFloorSummaries).toHaveLength(1);
+
+  await page.keyboard.press("r");
+  await expect.poll(async () => (await getSnapshot(page)).currentFloorNumber).toBe(1);
+  const replay = await getSnapshot(page);
+  expect(replay.runFingerprint).toBe(initial.runFingerprint);
+  expect(replay.runOutcome).toBe("active");
+  expect(replay.playerHealth).toBe(5);
+  expect(replay.availableShardCount).toBe(0);
+  expect(replay.selectedUpgradeIds).toEqual([]);
+  expect(replay.completedFloorSummaries).toEqual([]);
+});
+
+test("Windstep and Stalwart appear as real cards in a documented offer", async ({ page }) => {
+  await openMenu(page, "phase6-runes-1");
+  await startWithKey(page);
+  await collectAllChestShards(page);
+  await teleportToForge(page);
+  await page.keyboard.press("e");
+  await expect.poll(async () => (await getSnapshot(page)).upgradeOverlayVisible).toBe(true);
+  expect((await getSnapshot(page)).currentUpgradeOfferIds).toEqual([
+    "stalwart-rune",
+    "aegis-rune",
+    "windstep-sigil",
+  ]);
+  await page.keyboard.press("1");
+  await expect.poll(async () => (await getSnapshot(page)).effectiveHitStunDuration).toBe(90);
+  expect((await getSnapshot(page)).effectivePlayerKnockbackDuration).toBe(80);
 });
 
 test("loot remains optional for escape and N creates a fresh loot plan", async ({ page }) => {

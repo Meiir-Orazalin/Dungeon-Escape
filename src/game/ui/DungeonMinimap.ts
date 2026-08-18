@@ -10,6 +10,8 @@ import type { RunRewardState } from "../loot/rewardState";
 import type { LootPlan } from "../loot/types";
 import { deriveObjectiveMarkerState } from "../objective/minimapMarkers";
 import type { EscapeObjectivePlan, EscapeObjectiveState } from "../objective/types";
+import { getFloorTheme } from "../run/themes";
+import type { FloorTheme } from "../run/types";
 
 export class DungeonMinimap {
   private readonly graphics: Phaser.GameObjects.Graphics;
@@ -24,6 +26,7 @@ export class DungeonMinimap {
     private readonly objectivePlan: EscapeObjectivePlan,
     private readonly encounterPlan: EncounterPlan,
     private readonly lootPlan: LootPlan,
+    private readonly theme: FloorTheme = getFloorTheme(1),
   ) {
     this.mapHeight = (this.mapWidth * layout.mapHeight) / layout.mapWidth;
     const container = scene.add
@@ -86,7 +89,10 @@ export class DungeonMinimap {
     this.layout.rooms.forEach((room) => {
       if (!discovery.discoveredRoomIds.has(room.id)) return;
       const isCurrent = room.id === discovery.currentRoomId;
-      this.graphics.fillStyle(isCurrent ? 0xc69a59 : 0x59676a, isCurrent ? 0.95 : 0.78);
+      this.graphics.fillStyle(
+        isCurrent ? this.theme.accentColor : 0x59676a,
+        isCurrent ? 0.95 : 0.78,
+      );
       this.graphics.fillRect(
         this.offsetX + room.x * scaleX,
         this.offsetY + room.y * scaleY,

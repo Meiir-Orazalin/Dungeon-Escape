@@ -2,6 +2,8 @@ import Phaser from "phaser";
 
 import { hashSeed } from "../dungeon/seed";
 import type { DungeonLayout } from "../dungeon/types";
+import { getFloorTheme } from "../run/themes";
+import type { FloorTheme } from "../run/types";
 
 function decorationValue(seedHash: number, tileIndex: number): number {
   let value = seedHash ^ Math.imul(tileIndex + 1, 0x45d9f3b);
@@ -16,6 +18,7 @@ export class DungeonRenderer {
   public constructor(
     private readonly scene: Phaser.Scene,
     private readonly layout: DungeonLayout,
+    private readonly theme: FloorTheme = getFloorTheme(1),
   ) {
     this.collisionGroup = this.scene.physics.add.staticGroup();
   }
@@ -37,15 +40,15 @@ export class DungeonRenderer {
       const tileX = index % this.layout.mapWidth;
       const tileY = Math.floor(index / this.layout.mapWidth);
       const variation = decorationValue(seedHash, index) % 5;
-      const color = [0x161d20, 0x182023, 0x141b1e, 0x1a2224, 0x171e21][variation] as number;
+      const color = this.theme.floorColors[variation] as number;
 
       graphics.fillStyle(color, 1);
       graphics.fillRect(tileX * tileSize, tileY * tileSize, tileSize, tileSize);
-      graphics.lineStyle(1, 0x283235, 0.42);
+      graphics.lineStyle(1, this.theme.floorLineColor, 0.42);
       graphics.strokeRect(tileX * tileSize + 1, tileY * tileSize + 1, tileSize - 2, tileSize - 2);
 
       if (decorationValue(seedHash ^ 0xa53a9d1b, index) % 97 === 0) {
-        graphics.lineStyle(1, 0x394244, 0.58);
+        graphics.lineStyle(1, this.theme.crackColor, 0.58);
         graphics.beginPath();
         graphics.moveTo(tileX * tileSize + 6, tileY * tileSize + 22);
         graphics.lineTo(tileX * tileSize + 15, tileY * tileSize + 17);
@@ -67,13 +70,13 @@ export class DungeonRenderer {
       const x = tileX * tileSize;
       const y = tileY * tileSize;
       const variation = decorationValue(seedHash, index) % 3;
-      const color = [0x30383a, 0x343d3f, 0x2b3335][variation] as number;
+      const color = this.theme.wallColors[variation] as number;
 
       graphics.fillStyle(0x090c0e, 0.8);
       graphics.fillRect(x + 3, y + 4, tileSize, tileSize);
       graphics.fillStyle(color, 1);
       graphics.fillRect(x, y, tileSize, tileSize);
-      graphics.lineStyle(1, 0x4c5657, 0.72);
+      graphics.lineStyle(1, this.theme.wallLineColor, 0.72);
       graphics.strokeRect(x + 1, y + 1, tileSize - 2, tileSize - 2);
       graphics.lineStyle(1, 0x1a2022, 0.85);
       graphics.lineBetween(x + 2, y + tileSize / 2, x + tileSize - 2, y + tileSize / 2);
@@ -134,10 +137,10 @@ export class DungeonRenderer {
       const x = (position.x + 0.5) * tileSize;
       const y = (position.y + 0.5) * tileSize;
       const glow = this.scene.add
-        .circle(x, y, 56, 0xe59a43, 0.075)
+        .circle(x, y, 56, this.theme.accentColor, 0.075)
         .setBlendMode(Phaser.BlendModes.ADD)
         .setDepth(3);
-      this.scene.add.circle(x, y + 2, 6, 0x9f4f2b, 0.95).setDepth(4);
+      this.scene.add.circle(x, y + 2, 6, this.theme.gateAccentColor, 0.78).setDepth(4);
       this.scene.add.circle(x, y - 2, 3, 0xffd797, 1).setDepth(4);
       return glow;
     });

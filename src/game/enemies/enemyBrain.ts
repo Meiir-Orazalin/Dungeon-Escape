@@ -16,6 +16,7 @@ import type {
   StoneWardenState,
   StoneWardenTransition,
 } from "./types";
+import type { EffectiveEnemyStats } from "../run/types";
 
 const ZERO: Vector2 = Object.freeze({ x: 0, y: 0 });
 
@@ -38,21 +39,26 @@ function returnDecision(input: EnemyDecisionInput, speed: number): EnemyDecision
   });
 }
 
-export function decideBoneStalker(input: EnemyDecisionInput): EnemyDecision {
+export function decideBoneStalker(
+  input: EnemyDecisionInput,
+  effective?: EffectiveEnemyStats,
+): EnemyDecision {
+  const movementSpeed = effective?.movementSpeed ?? BONE_STALKER_CONFIG.movementSpeed;
   if (input.dead) return Object.freeze({ state: "dead", velocity: ZERO });
   if (!input.discovered) return Object.freeze({ state: "dormant", velocity: ZERO });
-  if (!input.playerInHomeRoom) return returnDecision(input, BONE_STALKER_CONFIG.movementSpeed);
+  if (!input.playerInHomeRoom) return returnDecision(input, movementSpeed);
   const velocity =
     distance(input.position, input.playerPosition) <= BONE_STALKER_CONFIG.closeDistance
       ? ZERO
-      : velocityToward(input.position, input.playerPosition, BONE_STALKER_CONFIG.movementSpeed);
+      : velocityToward(input.position, input.playerPosition, movementSpeed);
   return Object.freeze({ state: "chase", velocity });
 }
 
-export function createAshWispState(): AshWispState {
+export function createAshWispState(effective?: EffectiveEnemyStats): AshWispState {
   return Object.freeze({
     mode: "dormant",
-    shotCooldownRemainingMs: ASH_WISP_CONFIG.initialShotDelayMs,
+    shotCooldownRemainingMs:
+      effective?.wispInitialShotDelayMs ?? ASH_WISP_CONFIG.initialShotDelayMs,
     telegraphRemainingMs: 0,
     lockedDirection: DEFAULT_FACING,
   });
@@ -62,8 +68,12 @@ export function updateAshWisp(
   state: AshWispState,
   input: EnemyDecisionInput,
   rawDelta: number,
+  effective?: EffectiveEnemyStats,
 ): AshWispTransition {
   const delta = safeDelta(rawDelta);
+  const movementSpeed = effective?.movementSpeed ?? ASH_WISP_CONFIG.movementSpeed;
+  const shotCooldownMs = effective?.wispShotCooldownMs ?? ASH_WISP_CONFIG.shotCooldownMs;
+  const telegraphMs = effective?.wispTelegraphMs ?? ASH_WISP_CONFIG.shotTelegraphMs;
   if (input.dead) {
     return Object.freeze({
       state: Object.freeze({ ...state, mode: "dead", telegraphRemainingMs: 0 }),
@@ -81,7 +91,7 @@ export function updateAshWisp(
     });
   }
   if (!input.playerInHomeRoom) {
-    const decision = returnDecision(input, ASH_WISP_CONFIG.movementSpeed);
+    const decision = returnDecision(input, movementSpeed);
     return Object.freeze({
       state: Object.freeze({ ...state, mode: decision.state, telegraphRemainingMs: 0 }),
       velocity: decision.velocity,
@@ -104,7 +114,7 @@ export function updateAshWisp(
         ...state,
         mode: "hold",
         telegraphRemainingMs: 0,
-        shotCooldownRemainingMs: ASH_WISP_CONFIG.shotCooldownMs,
+        shotCooldownRemainingMs: shotCooldownMs,
       }),
       velocity: ZERO,
       fireProjectile: true,
@@ -119,7 +129,7 @@ export function updateAshWisp(
       state: Object.freeze({
         mode: "telegraph",
         shotCooldownRemainingMs: 0,
-        telegraphRemainingMs: ASH_WISP_CONFIG.shotTelegraphMs,
+        telegraphRemainingMs: telegraphMs,
         lockedDirection,
       }),
       velocity: ZERO,
@@ -140,8 +150,8 @@ export function updateAshWisp(
   return Object.freeze({
     state: Object.freeze({ ...state, mode, shotCooldownRemainingMs }),
     velocity: Object.freeze({
-      x: direction.x * ASH_WISP_CONFIG.movementSpeed * sign,
-      y: direction.y * ASH_WISP_CONFIG.movementSpeed * sign,
+      x: direction.x * movementSpeed * sign,
+      y: direction.y * movementSpeed * sign,
     }),
     fireProjectile: false,
     projectileDirection: state.lockedDirection,
@@ -157,8 +167,13 @@ export function updateStoneWarden(
   input: EnemyDecisionInput,
   rawDelta: number,
   signals: StoneWardenSignals = {},
+  effective?: EffectiveEnemyStats,
 ): StoneWardenTransition {
   const delta = safeDelta(rawDelta);
+  const movementSpeed = effective?.movementSpeed ?? STONE_WARDEN_CONFIG.movementSpeed;
+  const recoveryMs = effective?.wardenRecoveryMs ?? STONE_WARDEN_CONFIG.recoveryMs;
+  const windUpMs = effective?.wardenWindUpMs ?? STONE_WARDEN_CONFIG.chargeWindUpMs;
+  const chargeSpeed = effective?.wardenChargeSpeed ?? STONE_WARDEN_CONFIG.chargeSpeed;
   if (input.dead) {
     return Object.freeze({
       state: Object.freeze({ ...state, mode: "dead", remainingMs: 0 }),
@@ -172,7 +187,7 @@ export function updateStoneWarden(
     });
   }
   if (!input.playerInHomeRoom) {
-    const decision = returnDecision(input, STONE_WARDEN_CONFIG.movementSpeed);
+    const decision = returnDecision(input, movementSpeed);
     return Object.freeze({
       state: Object.freeze({ ...state, mode: decision.state, remainingMs: 0 }),
       velocity: decision.velocity,
@@ -183,7 +198,7 @@ export function updateStoneWarden(
       state: Object.freeze({
         ...state,
         mode: "recover",
-        remainingMs: STONE_WARDEN_CONFIG.recoveryMs,
+        remainingMs: recoveryMs,
       }),
       velocity: ZERO,
     });
@@ -200,8 +215,8 @@ export function updateStoneWarden(
         remainingMs: STONE_WARDEN_CONFIG.chargeDurationMs,
       }),
       velocity: Object.freeze({
-        x: state.lockedDirection.x * STONE_WARDEN_CONFIG.chargeSpeed,
-        y: state.lockedDirection.y * STONE_WARDEN_CONFIG.chargeSpeed,
+        x: state.lockedDirection.x * chargeSpeed,
+        y: state.lockedDirection.y * chargeSpeed,
       }),
     });
   }
@@ -212,7 +227,7 @@ export function updateStoneWarden(
         state: Object.freeze({
           ...state,
           mode: "recover",
-          remainingMs: STONE_WARDEN_CONFIG.recoveryMs,
+          remainingMs: recoveryMs,
         }),
         velocity: ZERO,
       });
@@ -220,8 +235,8 @@ export function updateStoneWarden(
     return Object.freeze({
       state: Object.freeze({ ...state, remainingMs }),
       velocity: Object.freeze({
-        x: state.lockedDirection.x * STONE_WARDEN_CONFIG.chargeSpeed,
-        y: state.lockedDirection.y * STONE_WARDEN_CONFIG.chargeSpeed,
+        x: state.lockedDirection.x * chargeSpeed,
+        y: state.lockedDirection.y * chargeSpeed,
       }),
     });
   }
@@ -243,7 +258,7 @@ export function updateStoneWarden(
     return Object.freeze({
       state: Object.freeze({
         mode: "wind-up",
-        remainingMs: STONE_WARDEN_CONFIG.chargeWindUpMs,
+        remainingMs: windUpMs,
         lockedDirection,
       }),
       velocity: ZERO,
@@ -251,11 +266,7 @@ export function updateStoneWarden(
   }
   return Object.freeze({
     state: Object.freeze({ ...state, mode: "approach", remainingMs: 0 }),
-    velocity: velocityToward(
-      input.position,
-      input.playerPosition,
-      STONE_WARDEN_CONFIG.movementSpeed,
-    ),
+    velocity: velocityToward(input.position, input.playerPosition, movementSpeed),
   });
 }
 

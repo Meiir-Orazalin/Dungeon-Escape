@@ -34,15 +34,15 @@ Publish the unchanged Phase 4 game as a root-hosted GitHub Pages site. Add canon
 
 ## Phase 5 — Loot and upgrades
 
-**Status: Complete — current release scope**
+**Status: Complete**
 
 Add three deterministic Treasure Chests, stable enemy reward assignments, Runic Shards, immediate-use Vitality Flasks, one safe-room Runeforge, six deterministic upgrade choices, and a maximum two-upgrade run build costing 6 then 8 shards. Same-seed and new-dungeon resets erase all runtime rewards and upgrades without adding an inventory or persistence.
 
 ## Phase 6 — Complete three-floor run
 
-**Status: Deferred**
+**Status: Complete — current release scope**
 
-Connect generation, objectives, combat, and upgrades into a complete three-floor run. Add floor transitions, difficulty progression, run victory, run defeat, and reliable state reset.
+Connect generation, objectives, combat, loot, and upgrades into exactly three deterministic floors: The Shifting Catacombs, Ember Vaults, and Obsidian Sanctum. Add versioned floor-seed derivation, a validated `RunPlan` and run fingerprint, floor themes, exact depth difficulty profiles, Floor Cleared transitions, health/shard/upgrade carry, one-point transition healing, floor-entry checkpoint replay, cumulative statistics, run victory, and whole-run defeat. Expand the catalog to eight upgrades while retaining three-card offers, two purchases per floor, and a six-purchase run maximum.
 
 ## Phase 7 — Presentation and balancing
 

@@ -1,103 +1,84 @@
 # Phase Status
 
-## Current release
+## Current release candidate
 
-- **Version:** `v0.5.0`
-- **Phase:** Phase 5 — Deterministic Loot and Run Upgrades
-- **State:** Complete, verified, deployed, and published
+- **Version:** `v0.6.0`
+- **Phase:** Phase 6 — Complete Deterministic Three-Floor Run
+- **State:** Implementation complete; production deployment verification pending
 - **Canonical production URL:** `https://meiirorazalin.com/`
-- **Phase 5 implementation commit:** `7a6babae7fd5ff233aef231af0bd19caa5b54bdc`
-- **Focused verification fixes:** `6dc70b243b7674870a8b2509ed68527d0e9ee4ff`, `035f49bfb62a974f2b6175184d668ea6ef2052f3`
+- **Phase 6 implementation commit:** pending creation by the verified release flow
+- **Focused verification fixes:** none at this stage
 
-The release remains on the existing static GitHub Pages architecture: `main` builds with the explicit Vite base `/`, only `dist` is deployed, HTTPS is enforced for `meiirorazalin.com`, and the readiness-gated bridge-free live smoke job follows each deployment. Phase 5 changes gameplay and accurate documentation only; it does not alter DNS, Pages, certificate, analytics, persistence, or backend configuration.
+The implementation preserves the existing GitHub Pages architecture: explicit Vite base `/`, `dist`-only workflow deployment from `main`, canonical custom domain, enforced HTTPS, and readiness-gated bridge-free live smoke. No DNS, Pages, certificate, homepage, or repository-variable changes are required.
 
-## Completed Phase 5 scope
+## Completed Phase 6 implementation
 
-- A pure `LootPlan` consumes the validated layout, objective, and encounter plans without changing their fingerprints.
-- The stable `lt-xxxxxxxx` fingerprint covers ordered forge placement, three ordered Treasure Chests and their contents, every ordered enemy reward, the three unchanged upstream fingerprints, and the upgrade-cost contract.
-- Exactly three chests occupy distinct reachable non-spawn, non-key, non-gate rooms. Graph-distance farthest/maximin ranking and bounded safe-tile searches make their rooms and positions reproducible.
-- The enemy-free spawn room contains one deterministic, non-blocking Runeforge with a preferred 96-pixel spawn separation.
-- Bone Stalkers and Ash Wisps plan 1 shard; Stone Wardens plan 2. Deterministic flask odds are 1/8, 1/5, and 1/3 respectively.
-- Each chest contains 2–4 shards. The lowest stable chest ID guarantees a Vitality Flask; every valid floor plans at least 14 shards and at least one flask.
-- Runtime drops resolve from the real death point to the closest deterministic safe point inside the home room. One multi-value shard object represents the complete reward.
-- Shards auto-collect within an inclusive 28-pixel radius. Flasks restore 2 health only while the living player is injured, clamp to effective maximum health, and remain in the world at full health.
-- Immutable reward transitions track available/total shards, opened chests, collected pickups, flask use, selected upgrades, and discriminated forge state.
-- The Runeforge costs 6 shards and then 8, offers three distinct deterministic unselected upgrades, and becomes exhausted after two choices.
-- The camera-fixed choice overlay supports arrows, 1/2/3, Enter, Escape, pointer hover/selection, and close. While open, a separate `choosing-upgrade` activity state pauses time, movement, combat, enemies, projectiles, loot, and background inputs without changing terminal `RunOutcome`.
-- HUD, discovered-only minimap markers, completion statistics, and defeat statistics now include the run-only reward/build state.
-- Same-seed replay restores the same four plans and offer sequence with fresh runtime state. New dungeon creates all four new plans and resets base combat, health, loot, chests, forge, and build.
+- One normalized URL seed plans the complete run; Floor 1 uses it exactly and Floors 2/3 use distinct versioned deterministic derived seeds.
+- A pure immutable `RunPlan` creates and validates exactly three complete floor bundles before play. Its `rn-xxxxxxxx` fingerprint covers ordered seeds, themes, exact difficulty profiles, all twelve floor fingerprints, carry/heal/economy contracts, and floor/run purchase limits.
+- The existing `dg-`, `eo-`, `ec-`, and `lt-` meanings remain unchanged. Floor 1 fingerprints match direct Phase 5-style planning from the URL seed.
+- The three floors are **The Shifting Catacombs**, **The Ember Vaults**, and **The Obsidian Sanctum**, with immutable presentation-only themes.
+- Difficulty profiles are exact: depth-1 base; depth-2 `+1` health, `1.08` movement, `0.92` action waits, `1.10` projectile/charge; depth-3 `+2`, `1.16`, `0.84`, `1.20`. Enemy damage remains `1`, Wisp telegraph `350 ms`, and Warden wind-up `550 ms`.
+- Current health, available/total shards, and global selected upgrades carry. Continue applies exactly one transition health, clamped to the derived maximum.
+- Every floor has fresh objective/enemies/loot/chests/pickups/discovery/forge. Forge purchases reset to costs `6` then `8`, with two purchases per floor and six across the run.
+- The catalog contains the six unchanged Phase 5 upgrades plus Windstep Sigil (`1.15` ordinary movement) and Stalwart Rune (`90 ms` hit stun, `80 ms` knockback duration).
+- Deterministic offers include floor number, floor-local offer index, current floor loot fingerprint, and stable global selections. Exactly three unselected cards remain legal through the final sixth purchase.
+- Floor 1/2 gates enter guarded **FLOOR CLEARED** transitions; Continue commits once, heals once, and renders the already-planned next floor. Floor 3 produces **DUNGEON CONQUERED** with no fourth floor.
+- Defeat on any floor produces **FALLEN IN THE DEPTHS** and ends the entire run.
+- Active-run <kbd>R</kbd> restores the immutable current floor-entry checkpoint. Terminal <kbd>R</kbd> restarts the whole same-seed RunPlan from Floor 1. <kbd>N</kbd> creates a new RunPlan. Reload begins a fresh Floor 1 run because no persistence exists.
+- Separate floor/run timers, current-floor minimap reset, carry-aware HUD, FloorSummary records, and cumulative victory/defeat statistics are implemented.
 
-## Upgrade catalog and final constants
+## Preserved behavior and isolation
 
-Phase 4 base combat values remain immutable. The pure effective-stat model applies at most two unique catalog IDs in stable catalog order:
+Phase 1 movement/input/responsiveness, Phase 2 generation, Phase 3 objectives, Phase 4 combat/enemies, Phase 5 per-floor loot/forge behavior, and v0.4.1 deployment protections remain in force. Loot and enemy clearance remain optional. No boss, trap, inventory, equipment, shop, audio, score, persistence, save, backend, service worker, or Phase 7 presentation scope was added.
 
-| Upgrade         | Exact Phase 5 effect                                                                                              |
-| --------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Tempered Edge   | Melee damage `1 → 2`                                                                                              |
-| Long Reach      | Melee range `58 → 76 px`; full arc remains `110°`                                                                 |
-| Quickened Steel | Recovery `105 → 75 ms`; start cooldown `330 → 260 ms`; wind-up `45 ms` and active window `80 ms` remain unchanged |
-| Fleet Sigil     | Dash cooldown `900 → 650 ms`; speed `600 px/s` and active duration `130 ms` remain unchanged                      |
-| Vital Rune      | Maximum health `5 → 6` and restores exactly `1` current health                                                    |
-| Aegis Rune      | Post-hit invulnerability `850 → 1,150 ms`; hit stun and damage remain unchanged                                   |
+The E2E bridge only exposes read-only run/floor/checkpoint/stat snapshots and the existing constrained player-positioning actions. It provides no floor advance, objective completion, victory, defeat, health/shard/build mutation, checkpoint restore, enemy kill, chest open, or pickup collection. Production scanning still rejects the bridge global, installer, and every teleport identifier.
 
-Offers use a local derived PRNG over the loot fingerprint, zero-based offer index, selected IDs in stable order, and catalog contract. `uo-xxxxxxxx` additionally includes the three ordered offered IDs. Neither offers nor selected upgrades alter the loot or upstream planning fingerprints.
+## Local verification record
 
-## Preserved behavior
+The implementation flow uses:
 
-- Phase 1 menu, keyboard/pointer input, movement, collision, responsive scaling, and camera behavior
-- Phase 2 deterministic 10–14-room layout generation and unchanged layout fingerprint meaning
-- Phase 3 Runic Key, Ancient Gate, timer, discovery, minimap, completion, and reset objective behavior
-- Phase 4 encounter planning, unchanged encounter fingerprint, three room-local archetypes, sword, dash, damage, defeat, and optional-enemy escape
-- v0.4.1 root-relative production build, metadata, Pages workflow, HTTPS redirects, custom domain, audit, E2E-only bridge isolation, and five-test live smoke suite
+```text
+pnpm format
+pnpm install
+pnpm install --frozen-lockfile
+pnpm format:check
+pnpm lint
+pnpm typecheck
+pnpm test:run
+pnpm build
+pnpm audit:production
+pnpm test:e2e
+pnpm check
+git diff --check
+```
 
-Loot and upgrades remain optional: unopened chests, uncollected pickups, zero upgrades, and living enemies never block the Ancient Gate.
+Current evidence before the final release gate:
 
-## Verification record
+- Unit tests: 17 files and 277 tests passed, including 100 RunPlans / 300 floor bundles.
+- Local Chromium: 38 tests passed, including real three-floor progression, checkpoint replay from gameplay and Runeforge selection, new-run routing from Runeforge selection, victory, Floor 2 defeat, carry behavior, and production-bridge isolation.
+- Production audit: 47 assertions passed across 10 deployed files.
+- Production build: passed; minified main JavaScript was `1,535.11 kB` (`400.13 kB` gzip) and retained Vite's existing advisory above the configured `1,500 kB` warning threshold.
+- Baseline live smoke: 5 bridge-free Chromium tests passed before implementation.
+- Formatting, ESLint, and strict TypeScript passed. Local visual review covered all three themes, Floor Cleared, Runeforge cards including Windstep/Stalwart, victory, defeat, and the `720 × 700` narrow layout with no page scrolling, clipping, page errors, or failed assets.
+- Final live smoke, workflow IDs, and production deployment will be recorded after their required release runs.
 
-The required local commands completed with these exact results:
+## Known limitations and deferred scope
 
-- `pnpm format`: passed
-- `pnpm install`: passed; dependencies were already current
-- `pnpm install --frozen-lockfile`: passed; the lockfile was current
-- `pnpm format:check`: passed
-- `pnpm lint`: passed with zero warnings
-- `pnpm typecheck`: passed under strict TypeScript
-- `pnpm test:run`: 15 files and 257 unit tests passed, including 100 representative valid loot plans
-- `pnpm build`: passed with the existing Vite/Phaser production configuration
-- `pnpm audit:production`: 47 assertions passed across 10 deployed files, including all Phase 4 and new Phase 5 bridge identifiers
-- `pnpm test:e2e`: the sandboxed command reproduced `listen EPERM` on `127.0.0.1:4173`; the exact unrestricted rerun passed all 30 Chromium tests
-- `pnpm check`: passed all formatting, lint, strict TypeScript, unit, build, and production-audit gates
-- `git diff --check`: passed
-- `LIVE_BASE_URL=https://meiirorazalin.com pnpm test:live`: all 5 Chromium tests passed before implementation and again after the Phase 5 deployment
+- Keyboard and pointer are the primary controls; there are no virtual mobile controls.
+- Enemies remain room-local regular archetypes; there is no boss or cross-floor pursuit.
+- The production JavaScript chunk retains the existing advisory size warning; it is not hidden or raised.
+- Runs are intentionally session-only. Refreshing the URL loses floor, health, shard, build, timer, and statistics state.
+- Phase 7 audio/presentation/balancing and Phase 8 optimization remain deferred.
 
-The initial sandboxed browser baseline command also reproduced the documented `listen EPERM` condition on `127.0.0.1:4173`; its exact unrestricted rerun passed all 22 pre-Phase-5 Chromium tests. The final expanded suite preserves those tests and adds eight Phase 5 scenarios.
+## Release intent and historical tags
 
-Local visual review passed at 1440 × 900, 960 × 540, 1024 × 640, and 720 × 700 across menu, closed/open chests, shard and flask pickups, healing, dormant/ready/exhausted forge states, all six upgrade cards, upgrade selection, HUD/build, minimap, completion, and defeat. The deployed `phase5-production-review` seed also passed live review at 1440 × 900 and 720 × 700 with the correct HTTPS host and query, readable menu/game, centered canvas, no scrolling, failed assets, browser diagnostics, mixed content, development overlay, or production test bridge.
+After implementation deployment, live verification, the final verification-record commit, and successful final workflows, annotated tag `v0.6.0` will point to final `main` with message `Phase 6: complete deterministic three-floor run`.
 
-Quality run `32007460397` passed for deployed commit `035f49bfb62a974f2b6175184d668ea6ef2052f3`. Deploy Production run `32007460408` passed: Verify and deploy job `95319788527` and readiness-gated Live production smoke job `95321114238` both succeeded. An earlier deployment exposed CI-only forge pointer/timing instability and an over-late Warden direction sample; focused commits `6dc70b243b7674870a8b2509ed68527d0e9ee4ff` and `035f49bfb62a974f2b6175184d668ea6ef2052f3` corrected those tests without weakening the gameplay contract.
+Published historical targets must remain unchanged:
 
-GitHub Pages remains `build_type: workflow` with `cname: meiirorazalin.com`, verified protected-domain state, approved certificate for the apex and `www`, and HTTPS enforcement enabled. `PRODUCTION_DOMAIN_READY=true`; the repository homepage remains the canonical URL. The HTTPS seed URL returned `200`, plain HTTP returned `301` to HTTPS, and `www` redirected to the canonical apex while preserving the seed query.
-
-## Production isolation
-
-Production audit scans built text assets for `__DUNGEON_ESCAPE_E2E__`, `installE2EBridge`, `teleportToTarget`, `teleportNearEnemy`, `teleportOntoEnemy`, `teleportToChest`, `teleportToForge`, and `teleportToPickup`. The new actions only position the normal player in E2E mode; they do not grant, open, collect, heal, select, kill, or mutate the objective/outcome.
-
-## Known limitations and deferred work
-
-- The run remains a single keyboard/pointer-first floor; enemies remain room-bound.
-- The minified production JavaScript chunk is approximately 1.51 MB and produces Vite's existing advisory chunk-size warning; the build and 47-check production audit pass, and the preserved warning threshold was not changed for this gameplay release.
-- Runic Shards and upgrades are run-only and intentionally reset by both `R` and `N`.
-- There is no inventory, equipment, rarity, crafting, shop, experience, character level, persistent progression, save, account, multiple floor, boss, scaling, score, achievement, trap, audio, pause menu, virtual control, analytics, backend, service worker, or offline mode.
-- Phase 6 through Phase 8 remain deferred.
-
-## Release intent and historical targets
-
-Implementation commit `7a6babae7fd5ff233aef231af0bd19caa5b54bdc` and its focused verification fixes are deployed and live-verified. The final verified `main` containing this record is intended for annotated tag `v0.5.0`; this document does not invent the release-record commit's own SHA.
-
+- `v0.5.0` → `944780aee6c2c592ccbfc6855126a41d47d0a561`
 - `v0.4.1` → `fdeea817472b3a8c5db41b2d331373a3a97ebe33`
 - `v0.4.0` → `b7dd859e6b2106e5f17066d38d55f5bba2514529`
 - `v0.3.0` → `bb29079df58b32645278e0843f6cd6ed2966b46e`
 - `v0.2.0` → `8f704df17d79cadb26b6e17834075814f1dd11ee`
-- `v0.1.0` → `819765fd0d5b5d80c1c3f083700f0f82112deecc`
-
-All published historical tags remain immutable.
+- `v0.1.0` → `819765fd0d5b80c1c3f083700f0f82112deecc`
