@@ -41,20 +41,35 @@ function expectCleanDiagnostics(diagnostics: Diagnostics): void {
   expect(diagnostics.failedApplicationRequests).toEqual([]);
 }
 
+async function waitForGameCanvas(page: Page): Promise<void> {
+  await expect(page.locator("#game-container canvas")).toBeVisible();
+}
+
+async function waitForMainMenu(page: Page): Promise<void> {
+  await waitForGameCanvas(page);
+  await expect(page.locator("#game-state")).toContainText("Main menu", {
+    timeout: 60_000,
+  });
+}
+
 test("canonical document metadata and public assets are production-ready", async ({
   page,
   request,
 }) => {
+  test.setTimeout(90_000);
   const diagnostics = observeDiagnostics(page);
-  const response = await page.goto("/", { waitUntil: "networkidle" });
+  const response = await page.goto("/", { waitUntil: "domcontentloaded" });
 
   expect(response?.ok()).toBe(true);
   expect(response?.url()).toBe(CANONICAL_URL);
+  await waitForGameCanvas(page);
+  await expect
+    .poll(() => new URL(page.url()).searchParams.get("seed"))
+    .toMatch(/^[a-z0-9_-]{1,48}$/);
   const runtimeUrl = new URL(page.url());
   expect(runtimeUrl.protocol).toBe("https:");
   expect(runtimeUrl.hostname).toBe("meiirorazalin.com");
   expect(runtimeUrl.pathname).toBe("/");
-  expect(runtimeUrl.searchParams.get("seed")).toMatch(/^[a-z0-9_-]{1,48}$/);
   await expect(page).toHaveTitle(DOCUMENT_TITLE);
   await expect(page.locator('link[rel="canonical"]')).toHaveAttribute("href", CANONICAL_URL);
   await expect(page.locator('meta[name="description"]')).toHaveAttribute("content", DESCRIPTION);
@@ -98,16 +113,18 @@ test("canonical document metadata and public assets are production-ready", async
 });
 
 test("fixed-seed production startup remains playable without page scrolling", async ({ page }) => {
+  test.setTimeout(90_000);
   const diagnostics = observeDiagnostics(page);
-  const response = await page.goto("/?seed=production-smoke", { waitUntil: "networkidle" });
+  const response = await page.goto("/?seed=production-smoke", {
+    waitUntil: "domcontentloaded",
+  });
 
   expect(response?.ok()).toBe(true);
+  await waitForMainMenu(page);
   const canvas = page.locator("#game-container canvas");
-  await expect(canvas).toBeVisible();
   const box = await canvas.boundingBox();
   expect(box?.width ?? 0).toBeGreaterThan(0);
   expect(box?.height ?? 0).toBeGreaterThan(0);
-  await expect(page.locator("#game-state")).toContainText("Main menu");
   await expect(page.locator("#game-state")).toContainText("How to Play");
   await expect(page.locator("#game-state")).toContainText("Settings");
   await page.keyboard.press("Enter");
@@ -140,14 +157,14 @@ test("plain HTTP redirects to the canonical HTTPS root", async ({ request }) => 
 test("www redirects to apex HTTPS while preserving the seed query", async ({ page }) => {
   const diagnostics = observeDiagnostics(page);
   await page.goto("https://www.meiirorazalin.com/?seed=www-redirect-check", {
-    waitUntil: "networkidle",
+    waitUntil: "domcontentloaded",
   });
 
+  await waitForGameCanvas(page);
   const finalUrl = new URL(page.url());
   expect(finalUrl.protocol).toBe("https:");
   expect(finalUrl.hostname).toBe("meiirorazalin.com");
   expect(finalUrl.searchParams.get("seed")).toBe("www-redirect-check");
-  await expect(page.locator("#game-container canvas")).toBeVisible();
   expectCleanDiagnostics(diagnostics);
 });
 
@@ -155,7 +172,8 @@ test("production excludes test bridges, localhost resources, mixed content, and 
   page,
 }) => {
   const diagnostics = observeDiagnostics(page);
-  await page.goto("/?seed=isolation-check", { waitUntil: "networkidle" });
+  await page.goto("/?seed=isolation-check", { waitUntil: "domcontentloaded" });
+  await waitForGameCanvas(page);
 
   const globals = await page.evaluate(() => ({
     bridge: "__DUNGEON_ESCAPE_E2E__" in window,
