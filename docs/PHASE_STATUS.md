@@ -4,15 +4,91 @@
 
 - **Version:** `1.0.0`
 - **Phase:** Phase 8 — Final Release Hardening
-- **State:** Implementation and local release verification in progress; publication remains gated on final workflows and live matrix.
+- **State:** Complete, locally verified, deployed, and independently live-verified; the annotated tag and GitHub Release follow only after this record is deployed.
 - **Canonical production URL:** `https://meiirorazalin.com/`
+- **Phase 8 implementation:** `bed9742fc64af743bb5f627bbf7a8f9c9cb19d00`
+- **Focused fix:** `d35763444c1f28f3e39c0defc1db4f8d20889a4c` — wait for `MenuScene` readiness before reload/fallback keyboard-start assertions on a slower Linux WebKit runner.
+- **Verification record:** this documentation commit; its own SHA is intentionally not embedded inside itself.
 - **Published Phase 7 baseline:** annotated `v0.7.0` at `7dc2c37c53cf2d7fbd1b0eea0908229ad388fd8a`
 
-Phase 8 preserves every gameplay and planning contract. The five-seed Phase 7 fixture locks five run fingerprints, fifteen floor seeds, and sixty subsystem fingerprints. Production remains Phaser.AUTO with WebGL preference and Canvas fallback; audio/storage/fullscreen are optional; missing both renderers receives friendly reload guidance. Release gates add deep Chromium, focused Chromium/Firefox/WebKit, forced Canvas, deterministic soak, contrast, production-budget, release-audit, and bridge-free live-matrix evidence.
+Phase 8 adds release hardening only. The five-seed Phase 7 fixture preserved five run fingerprints, fifteen floor seeds, and sixty floor-local layout/objective/encounter/loot fingerprints exactly. The game remains exactly three floors with eight upgrades and unchanged combat, difficulty, loot, carry, checkpoint, presentation, audio, pause, settings, and `450 ms` awakening contracts.
 
-Final budgets are 300,000 application JavaScript bytes, 1,450,000 Phaser vendor bytes, 450,000 combined gzip JavaScript bytes, 3,500,000 audio bytes, 6,500,000 deployed bytes, and 1,500,000 bytes for a single non-audio asset. Runtime limits remain ten SFX voices, one ambience, and 96 normal/48 reduced-motion transient effects.
+## Browser, renderer, capability, and accessibility contract
 
-The exact implementation/fix/verification SHAs, test counts, byte reports, soak duration, workflow runs, visual review, known limitations, and GitHub Release intent will be recorded only after those checks produce command evidence.
+- The pinned Playwright release engines are Chromium, Firefox, and WebKit. WebKit is a Safari-family compatibility proxy, not a claim about every historical Safari release.
+- Production remains `Phaser.AUTO`: WebGL is preferred and Canvas is the supported fallback. The E2E-only Canvas override does not enter production or change fingerprints.
+- Audio, storage, and fullscreen are optional. Audio boots and decodes without blocking Menu/canvas creation; audio failures are silent, storage denial uses defaults, and fullscreen rejection remains handled.
+- Missing both renderers displays `DUNGEON ESCAPE COULD NOT START`, concise browser guidance, a Reload Game action, and the release version without a player-facing stack trace.
+- CSS-scale, DPR, camera-scroll, resize, fullscreen, Canvas, and WebGL pointer mappings share one defensive contract. One-shot keyboard repeats are ignored and gameplay/navigation keys do not scroll the page while game controls own them.
+- Fourteen essential text/non-text token pairs pass the documented `4.5:1` or `3:1` contrast thresholds. Canvas labelling, the non-canvas control summary, visible modal focus, announcements, high contrast, large text, and reduced motion remain intact.
+- Version text is compiled from `package.json` and renders as `v1.0.0`; an optional CI SHA is presentation-only.
+
+## Local release evidence
+
+Commands completed:
+
+```text
+pnpm audio:generate
+pnpm format
+pnpm install
+pnpm install --frozen-lockfile
+pnpm format:check
+pnpm lint
+pnpm typecheck
+pnpm test:run
+pnpm audit:audio
+pnpm build
+pnpm audit:production
+pnpm audit:release
+pnpm test:e2e
+pnpm test:e2e:release
+pnpm test:e2e:canvas
+pnpm test:soak
+pnpm check
+pnpm check:release
+git diff --check
+LIVE_BASE_URL=https://meiirorazalin.com pnpm test:live:matrix
+```
+
+- Unit: `316 / 316` across `20` files.
+- Planning compatibility: `5 / 5` run seeds, `15 / 15` floor seeds, and `60 / 60` subsystem fingerprints exact.
+- Deep Chromium: `43 / 43`.
+- Core browser matrix: `7 / 7` Chromium, `7 / 7` Firefox, `7 / 7` WebKit. The readiness correction additionally passed `21 / 21` across three repeated WebKit runs.
+- Forced Canvas: `12 / 12` with renderer, Menu, run start, movement, pointer attack, Pause, Settings, key/gate, floor transition, resize, and diagnostics covered.
+- Lifecycle soak: `1 / 1` in `12.3 s`; ten Pause/Resume cycles, five Settings cycles, five Manual cycles, ten mute toggles, three fullscreen attempts, three viewports, combat/awakening, chest/pickup, forge, floor transition, three replays, and three new runs stayed within listener/object/audio/effect bounds.
+- Live matrix: `5 / 5` per engine (`15 / 15`) in the independent post-deploy run.
+- Audio: `275 / 275`; the unchanged `22` mono PCM WAV files remain `1,892,860` bytes.
+- Production: `109 / 109` across `34` deployed files. Release: `43 / 43`.
+- Isolation: production contains no E2E bridge/teleport installer, Canvas override, fatal-test switch, lifecycle diagnostic collector, localhost URL, source map, test artifact, environment file, external runtime script, or external audio.
+
+## Budgets and production artifact
+
+- Application JavaScript: `209,410` bytes minified / `54,991` gzip (budget `300,000`).
+- Phaser vendor JavaScript: `1,374,829` bytes minified / `355,968` gzip (budget `1,450,000`).
+- Total JavaScript: `1,584,239` bytes minified / `410,959` gzip (gzip budget `450,000`).
+- Audio: `1,892,860` bytes (budget `3,500,000`).
+- Total deployed site: `3,859,750` bytes (budget `6,500,000`).
+- Largest non-audio file: Phaser vendor at `1,374,829` bytes (budget `1,500,000`).
+- Runtime limits: ten SFX voices, one ambience, 96 normal/48 reduced-motion transient effects.
+- `chunkSizeWarningLimit` remains `1,500` kB. No Vite chunk warning remains because the isolated Phaser chunk is below it.
+
+## Workflow, production, and review evidence
+
+- Implementation Quality `32131618501`: success. Implementation Deploy `32131618658` correctly stopped before deployment when Linux WebKit exposed the missing Menu-readiness wait in the new release test.
+- Post-fix Quality `32132913283` / job `95697769522`: success.
+- Post-fix Deploy Production `32132913292`: success. Verify and deploy job `95697769569` passed every release gate and deployed in `12m16s`.
+- Live production browser matrix job `95700918346`: success in `1m23s`, with five bridge-free tests per engine.
+- Local/live visual review passed at `1440 × 900`, `1024 × 640`, `960 × 540`, `720 × 700`, and `390 × 844` across Chromium WebGL, Chromium Canvas, Firefox, and WebKit. Menu, onboarding, Settings, Manual, Pause, active play, floor presentation, responsive framing, version display, and fatal renderer guidance showed no clipping, stale state, accidental scroll, or horizontal overflow.
+- Production review at `https://meiirorazalin.com/?seed=v1-production-review` showed `v1.0.0`, successful real run start, correct Chromium/Firefox/WebKit rendering, reachable local audio, no mixed content, no external runtime request, and no production bridge, Canvas override, or lifecycle diagnostics.
+- Production architecture remains root-based Vite, dist-only workflow Pages deployment from `main`, canonical `meiirorazalin.com`, enforced HTTPS, and `PRODUCTION_DOMAIN_READY=true`; DNS, Pages, certificate, homepage, and repository variables were not changed.
+
+## Known limitations and release intent
+
+- Keyboard and pointer landscape play are primary; portrait remains readable and recommends landscape but has no virtual controls.
+- Audio may degrade silently. Fullscreen is optional. Run progress intentionally does not persist.
+- WebKit is automated Safari-family evidence rather than exhaustive Safari/device coverage.
+- No controller, offline, service-worker, boss, trap, score, save, backend, analytics, or new gameplay system was added.
+- Annotated `v1.0.0` and the non-draft, non-prerelease `Dungeon Escape v1.0.0` GitHub Release are created only after the verification-record commit passes the same final deployment and live-matrix gate.
 
 Historical published targets remain:
 
@@ -27,11 +103,11 @@ Historical published targets remain:
 
 ---
 
-## Current release candidate
+## Published Phase 7 release
 
 - **Version:** `v0.7.0`
 - **Phase:** Phase 7 — Presentation, Audio, Accessibility, and Balancing
-- **State:** Complete, locally verified, deployed, and independently live-verified; annotated publication follows this corrected final verification record
+- **State:** Complete, verified, deployed, and published
 - **Canonical production URL:** `https://meiirorazalin.com/`
 - **Phase 7 implementation commit:** `71beaf465c64b0e19f39b6568e638cff3c9d8299`
 - **Focused fix commits:**
@@ -120,14 +196,13 @@ Verified implementation evidence:
 - Live review at `https://meiirorazalin.com/?seed=phase7-production-review`: canonical HTTPS presentation loaded at `720 × 700`; the Phase 7 Menu, Settings, How to Play, and Fullscreen controls rendered without overflow or clipping, and the automated diagnostics found no failed assets, mixed content, external audio request, autoplay exception, development overlay, or production bridge.
 - Production architecture remains Vite base `/`, dist-only workflow Pages deployment from `main`, canonical `meiirorazalin.com`, enforced HTTPS, and `PRODUCTION_DOMAIN_READY=true`; no DNS, Pages, certificate, homepage, or repository-variable setting changed.
 
-The release will not be tagged before the final verification commit is itself deployed and verified.
+The annotated `v0.7.0` release is published at peeled target `7dc2c37c53cf2d7fbd1b0eea0908229ad388fd8a` with message `Phase 7: presentation audio and balancing`.
 
-## Release intent and historical tags
+## Phase 7 historical tags
 
-After final verification, annotated tag `v0.7.0` will point to final `main` with message `Phase 7: presentation audio and balancing`.
+Published targets remain unchanged:
 
-Published targets that must remain unchanged:
-
+- `v0.7.0` → `7dc2c37c53cf2d7fbd1b0eea0908229ad388fd8a`
 - `v0.6.0` → `97b15629875c5ae664fe49e988eafbbf0a60518e`
 - `v0.5.0` → `944780aee6c2c592ccbfc6855126a41d47d0a561`
 - `v0.4.1` → `fdeea817472b3a8c5db41b2d331373a3a97ebe33`
